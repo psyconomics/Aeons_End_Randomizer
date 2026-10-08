@@ -140,6 +140,11 @@ a { color: var(--breach); }
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
+/* .sigilbar setzt display:flex (Autoren-Regel) und überschreibt damit das UA-Default [hidden]{display:none}
+   — ohne diese Regel blieb die Leiste trotz hidden-Attribut sichtbar (Startseite, Tablet-Kampf). */
+.sigilbar[hidden] { display: none; }
+/* Absicherung: im Tablet-Kampf-Screen nie anzeigen, unabhängig vom gesetzten hidden-Attribut. */
+body:has(#screen-battle:not([hidden]) #combatTabletView:not([hidden])) #topbar { display: none; }
 /* Titel links ist der Weg zur Startseite (ersetzt den früheren "Zur Startseite"-Button). */
 .sigilbar__brand--link {
   display: inline-flex;
