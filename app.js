@@ -632,12 +632,20 @@ ${briefing}
 Erzfeinde in Kampfreihenfolge: ${nemesisPoolNames.join(' → ')}.
 ${toneNotes}
 
-Magier der Gruppe sind die Hauptfiguren — zeig ihre Persönlichkeit durch Handlung und knappe Dialoge statt durch Beschreibung. Passende Pronomen nutzen, wo ein Geschlecht angegeben ist.
+Magier der Gruppe sind die Hauptfiguren. Passende Pronomen nutzen, wo ein Geschlecht angegeben ist.
 Verfügbare NPCs: ${npcPool.join(', ') || '(keine – frei erfunden, aber lorekonform)'}
 ${treasurePoolNote}
 
-STIL
-Klar, direkt, kurze Sätze. Ein Gedanke pro Satz. Höchstens ein schlichtes Bild pro Szene. Keine Füllsätze, keine Wiederholungen.
+STIL UND ERZÄHLWEISE
+Schreibe wie ein offiziell lektorierter Kampagnentext aus der Welt von Aeon's End: eine zusammenhängende Fantasy-Erzählung in klarer, natürlicher Prosa — keine Abfolge von Szenen, Stichpunkten oder filmischen Einstellungen. Keine Füllsätze, keine Wiederholungen.
+- Absätze: Jeder Absatz entwickelt einen zusammenhängenden Gedanken, eine Handlung oder einen Dialogaustausch über mehrere Sätze. Keine Ein-Satz-Absätze und keine Reihung isolierter Fragmente wie „Dann war es still." / „Nur einmal." / „Sie blieb stehen." / „Niemand antwortete.". Ist so ein Moment erzählerisch wichtig, bette ihn in einen vollständigen Absatz und den Handlungsfluss ein.
+- Rhythmus: Satzlängen variieren. Kurze Sätze nur gezielt und selten; sie bestimmen nie den Grundrhythmus.
+- Zusammenhang: Verbinde aufeinanderfolgende Ereignisse ursächlich. Zeige, wie die Figuren reagieren und wie daraus der nächste Moment entsteht. Jeder Abschnitt entwickelt sich aus dem vorherigen und führt zum nächsten — schreibe eine Geschichte, keine Folge „cooler" Einzelmomente.
+- Spannung: entsteht durch Handlung, Konsequenzen, Wahrnehmung, Dialog und wachsende Bedrohung — nicht durch Satzfragmente oder häufige Absatzumbrüche.
+- Figuren: Persönlichkeit zeigt sich in Entscheidungen, Verhalten, Reaktionen und kurzen, glaubwürdigen Dialogen, nicht in direkten Charakterbeschreibungen.
+- Orientierung: Der Leser weiß jederzeit, wo die Gruppe ist, was geschieht und warum sie als Nächstes handelt.
+- Beschreibung: sparsam, aber konkret. Nur Details, die Atmosphäre, Handlung oder Charakterisierung tragen; keine bedeutungslosen Adjektive, keine austauschbaren Fantasy-Bilder.
+- Dialog: natürlich und mit Zweck. Keine kurzen Zeilen, die nur Spannung markieren oder Information künstlich dramatisch zerstückeln.
 
 LÄNGE (hart — eher kürzer)
 Kapitel 1–4: je 180–250 Wörter. Epilog: 120–180 Wörter.
@@ -4101,7 +4109,11 @@ function renderScreen() {
   // eigene Navigation, "Zurück"; der Platz wird für das 3-Spalten-Layout gebraucht).
   topbar.hidden = app.step === 'home' || (app.step === 'battle' && !!app.options.tabletMode);
 
-  if (app.plan) {
+  // Expeditions-Info (Name · Seed · Score) nur auf Screens der laufenden Expedition — nicht auf
+  // Startseite, Optionen, Chronik und "Neue Expedition", auch wenn app.plan dort noch gesetzt ist
+  // (z. B. nach "Zurück" aus dem Aufbau, ohne backToHome()).
+  const NO_EXPEDITION_INFO_STEPS = ['home', 'options', 'chronicle', 'new-expedition'];
+  if (app.plan && !NO_EXPEDITION_INFO_STEPS.includes(app.step)) {
     el('topbarInfo').textContent = `${app.plan.name} · Seed ${app.plan.seed} · Score ${app.runtime ? app.runtime.score : 0}`;
   } else {
     el('topbarInfo').textContent = '';
@@ -4142,7 +4154,7 @@ el('btnOptionsBack').addEventListener('click', () => { playSfx('navigation_backw
 el('btnChronicle').addEventListener('click', () => { playSfx('navigation_forward'); goto('chronicle'); });
 el('btnChronicleBack').addEventListener('click', () => { playSfx('navigation_backward'); goto('home'); });
 el('btnChronicleReset').addEventListener('click', () => {
-  if (confirm('Expeditions-Chronik wirklich zurücksetzen? Alle Errungenschaften, Bestleistungen und die Erzfeind-Ranking werden gelöscht.')) {
+  if (confirm('Legenden der Feste wirklich zurücksetzen? Alle Errungenschaften, Bestleistungen und das Erzfeind-Ranking werden gelöscht.')) {
     resetStats();
     playSfx('delete');
   }
