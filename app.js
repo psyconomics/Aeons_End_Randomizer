@@ -1716,7 +1716,7 @@ function renderHome() {
         <button class="btn btn--ghost btn--small" data-action="delete">Löschen</button>
         <button class="btn btn--primary btn--small" data-action="load">Laden</button>
       </div>`;
-    row.querySelector('[data-action="load"]').onclick = () => loadSlotById(s.id);
+    row.querySelector('[data-action="load"]').onclick = () => { playSfx('create_expedition'); loadSlotById(s.id); };
     row.querySelector('[data-action="delete"]').onclick = () => { if (confirm('Diese Expedition löschen?')) { deleteSlot(s.id); playSfx('delete'); updateNewExpeditionAvailability(); } };
     list.appendChild(row);
   });
