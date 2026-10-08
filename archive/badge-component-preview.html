@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Achievement-Badge-Komponente — Vorschau</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #0e0d14;
+    --deep: #171a2e;
+    --deep-2: #1f2340;
+    --aetherium: #7c5cff;
+    --aetherium-dim: #5a41b8;
+    --breach: #34d0c4;
+    --parchment: #e8e1cf;
+    --parchment-dim: #b9b2a0;
+    --ember: #c1443b;
+    --line: rgba(232, 225, 207, 0.14);
+    --tier-s: #ffd54f;
+    --title-face: 'Friz Quadrata', 'Friz Quadrata Bold', Copperplate, 'Cinzel', 'Cormorant Garamond', Georgia, serif;
+    --body-face: Charter, 'Bitstream Charter', 'Source Serif 4', Georgia, serif;
+    --sans: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 48px 32px 90px;
+    background: var(--void);
+    background-image: radial-gradient(circle at 20% 0%, rgba(124,92,255,0.08), transparent 55%);
+    color: var(--parchment);
+    font-family: var(--sans);
+    min-height: 100vh;
+  }
+  .lab-header { max-width: 900px; margin: 0 auto 36px; }
+  .lab-header h1 { font-family: var(--title-face); font-size: 1.6rem; margin: 0 0 6px; font-weight: 600; }
+  .lab-header p { margin: 0; color: var(--parchment-dim); font-family: var(--body-face); font-size: 0.95rem; line-height: 1.5; max-width: 640px; }
+  .lab-section { max-width: 1180px; margin: 56px auto 0; }
+  .lab-section:first-of-type { margin-top: 0; }
+  .lab-section h2 { font-family: var(--title-face); font-size: 1.2rem; font-weight: 600; margin: 0 0 4px; border-top: 1px solid var(--line); padding-top: 32px; }
+  .lab-section > p { margin: 0 0 22px; color: var(--parchment-dim); font-family: var(--sans); font-size: 0.86rem; line-height: 1.5; max-width: 680px; }
+
+  /* ============================================================
+     Badge-Komponente (Meilensteine / Achievements)
+     ============================================================ */
+  .badge-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 18px;
+  }
+  .badge-grid--states {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 220px));
+    max-width: 700px;
+  }
+
+  .badge-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding: 20px 14px 18px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .badge-card:hover { transform: translateY(-2px); border-color: rgba(232,225,207,0.22); }
+
+  /* Icon-Kreis: zwei Zustände, erfüllt (gold) und gesperrt (grau) */
+  .badge-card__icon-wrap {
+    --badge-color: var(--parchment-dim);
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 2px solid color-mix(in srgb, var(--badge-color) 55%, var(--line) 45%);
+    background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--badge-color) 18%, var(--deep-2)), var(--void) 82%);
+    transition: filter 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+  .badge-card__icon-wrap svg {
+    width: 34px;
+    height: 34px;
+    stroke: var(--badge-color);
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: stroke 0.2s;
+  }
+
+  /* Gesperrt: ausgegraut (bestehendes Projekt-Muster, vgl. styles.css:489-490 / :889) */
+  .badge-card.is-locked .badge-card__icon-wrap {
+    opacity: 0.55;
+    filter: grayscale(0.5);
+  }
+  .badge-card.is-locked .badge-card__title { color: var(--parchment-dim); }
+
+  /* Erfüllt: golden, mit leichtem Glow — analog --tier-s / Gold-Varianten im Projekt */
+  .badge-card.is-complete .badge-card__icon-wrap {
+    --badge-color: var(--tier-s);
+    opacity: 1;
+    filter: none;
+    border-color: var(--tier-s);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--tier-s) 45%, transparent),
+      0 0 22px -4px color-mix(in srgb, var(--tier-s) 70%, transparent);
+  }
+  .badge-card.is-complete .badge-card__title { color: var(--parchment); }
+
+  .badge-card__title {
+    font-family: var(--title-face);
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  .badge-card__condition {
+    font-family: var(--body-face);
+    font-size: 0.8rem;
+    color: var(--parchment-dim);
+    line-height: 1.4;
+    min-height: 2.6em;
+  }
+
+  /* Fortschrittsleiste mit Füllgrad — neue Komponente, es gab bisher keine Fill-Bar im Projekt.
+     Track-Optik angelehnt an .build-progress__line (--line als Hintergrund), Füllfarbe
+     Aetherium→Breach-Gradient (unerfüllt) bzw. Gold (bei 100%, visuell redundant zum goldenen
+     Icon, aber bewusst konsistent dargestellt). */
+  .badge-fillbar {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 2px;
+  }
+  .badge-fillbar__track {
+    width: 100%;
+    height: 6px;
+    border-radius: 4px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .badge-fillbar__fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--aetherium-dim), var(--breach));
+    transition: width 0.25s;
+  }
+  .badge-card.is-complete .badge-fillbar__fill {
+    background: var(--tier-s);
+  }
+  .badge-fillbar__label {
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    color: var(--parchment-dim);
+    letter-spacing: 0.01em;
+  }
+
+  .lab-caption { text-align: center; margin-top: 10px; font-size: 0.78rem; color: var(--parchment-dim); font-family: var(--sans); }
+</style>
+</head>
+<body>
+
+<div class="lab-header">
+  <h1>Achievement-Badge — Komponenten-Entwurf</h1>
+  <p>
+    Baustein für die Expeditions-Chronik (Bereich „Errungenschaften“, siehe FEATURE_WISHLIST.md).
+    Jedes Badge zeigt Titel, Icon-Kreis (grau = gesperrt, golden = erfüllt), Bedingungstext und eine
+    Fortschrittsleiste. Bei binären Achievements kann die Leiste nur leer (0&nbsp;%) oder voll
+    (100&nbsp;%) sein, bei zählbaren Achievements füllt sie sich stufenlos entsprechend dem Fortschritt.
+  </p>
+</div>
+
+<!-- ===================== Zustände im Detail ===================== -->
+<div class="lab-section">
+  <h2>Die drei Zustände</h2>
+  <p>Gesperrt mit Teilfortschritt (zählbar), gesperrt ohne Fortschritt (binär, 0&nbsp;%) und vollständig erfüllt (golden).</p>
+  <div class="badge-grid badge-grid--states" id="stateDemo"></div>
+</div>
+
+<!-- ===================== Alle 40 Beispiel-Achievements ===================== -->
+<div class="lab-section">
+  <h2>Alle 40 Beispiel-Achievements</h2>
+  <p>
+    Entspricht 1:1 der Liste in FEATURE_WISHLIST.md (`### Beispiel-Achievement-Liste`). Zustände hier
+    nur zur Demonstration zufällig verteilt — in der echten Umsetzung ergeben sie sich aus
+    <code>app.stats.achievements</code>.
+  </p>
+  <div class="badge-grid" id="badgeGrid"></div>
+</div>
+
+<script>
+// ---------------------------------------------------------------
+// Icon-Bibliothek: 40 handgezeichnete Linien-Icons, viewBox 0 0 24 24,
+// stroke="currentColor" (Farbe kommt vom umgebenden .badge-card__icon-wrap über CSS).
+// Jedes Icon ist bewusst reduziert (wenige Pfade), damit es auch klein (34px) klar erkennbar bleibt.
+// ---------------------------------------------------------------
+const ICONS = {
+  footprint: '<path d="M9 3c-2 0-3 2-3 4.5S7 12 7 14s-1 3-1 5a2 2 0 0 0 4 0c0-2.5-1-3.5-1-6s1.5-3.5 1.5-6S10.5 3 9 3Z"/><path d="M16 7c-1.6 0-2.5 1.6-2.5 3.6S15 14 15 15.6s-.8 2.4-.8 4a1.8 1.8 0 0 0 3.6 0c0-2-.8-2.8-.8-4.8s1.3-2.8 1.3-4.8S17.3 7 16 7Z"/>',
+  sword: '<path d="M14.5 2.5 21 9l-9.5 9.5-3-3L17 7l-2.5-2.5Z"/><path d="M8.5 15.5 3 21"/><path d="M6 17l2 2"/><path d="M5 19.5l-.8.8"/>',
+  shieldCheck: '<path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6l-8-3Z"/><path d="M9 12.5l2 2 4-4.5"/>',
+  phoenix: '<path d="M12 3c2 2 2 4 0 6-2-2-2-4 0-6Z"/><path d="M12 9c3 1 6 3 7 7-3 0-6-1-7-3-1 2-4 3-7 3 1-4 4-6 7-7Z"/><path d="M12 16v5"/><path d="M9 19l3 2 3-2"/>',
+  chainBreak: '<path d="M9 7a3 3 0 1 1 4.2 4.3"/><path d="M15 17a3 3 0 1 1-4.2-4.3"/><path d="M4 13l3 3"/><path d="M17 8l3 3"/><path d="M11 11l2 2"/>',
+  laurel: '<path d="M12 4v16"/><path d="M12 6c-2-1-4 0-5 2 2 0 3 1 3 1-2 0-3 1.5-2.5 3.5 1.5 0 2.5-1 2.5-1-1 2 0 3.5 2 4.5"/><path d="M12 6c2-1 4 0 5 2-2 0-3 1-3 1 2 0 3 1.5 2.5 3.5-1.5 0-2.5-1-2.5-1 1 2 0 3.5-2 4.5"/>',
+  flame: '<path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c0-1-.5-1.8-1-2.5.6 2 .2 3-1 4"/><path d="M9 10a5 5 0 1 0 7 5c0-2-1-3-2-4"/>',
+  crowd: '<circle cx="7" cy="8" r="2.3"/><circle cx="17" cy="8" r="2.3"/><circle cx="12" cy="7" r="2.6"/><path d="M3.5 19c0-3 2-5 4.3-5"/><path d="M20.5 19c0-3-2-5-4.3-5"/><path d="M7.5 19c0-3.3 2-5.5 4.5-5.5s4.5 2.2 4.5 5.5"/>',
+  anchor: '<circle cx="12" cy="5" r="2"/><path d="M12 7v13"/><path d="M7 13H3a9 7 0 0 0 9 6 9 7 0 0 0 9-6h-4"/>',
+  star: '<path d="M12 3l2.3 5.1 5.6.6-4.2 3.8 1.2 5.5L12 15.8 6.9 18l1.3-5.5-4.2-3.8 5.6-.6Z"/>',
+  slingshot: '<path d="M4 20 15 9"/><path d="M14 5l5 5"/><circle cx="18" cy="6" r="2"/><path d="M9 14l2 2"/>',
+  puzzle: '<path d="M9 4h3.3a1.6 1.6 0 0 1 0 3H12v2.3h2.3a1.6 1.6 0 1 1 0 3H12V15h-2.3a1.6 1.6 0 1 0 0 3H12v2H9v-3.3a1.6 1.6 0 0 1-3 0V9h3V5.7a1.6 1.6 0 0 1 0-3V4Z"/>',
+  crown: '<path d="M4 18h16l-1-9-4 3-3-6-3 6-4-3Z"/><path d="M4 20h16"/>',
+  crossedSwords: '<path d="M4 4l16 16"/><path d="M20 4 4 20"/><path d="M4 4l3 .5.5 3"/><path d="M20 4l-3 .5-.5 3"/><path d="M4 20l3-.5.5-3"/><path d="M20 20l-3-.5-.5-3"/>',
+  mountain: '<path d="M3 18 9 7l3 4 2-2.5L20 18Z"/><circle cx="7.5" cy="6" r="1.3"/>',
+  shieldSimple: '<path d="M12 3 5 6v6c0 4.5 3 7 7 9 4-2 7-4.5 7-9V6l-7-3Z"/>',
+  flag: '<path d="M6 21V4"/><path d="M6 4h12l-3 4 3 4H6"/>',
+  skull: '<path d="M12 3a7 7 0 0 0-5 11.9V17h2v2h2v-2h2v2h2v-2h2v-2.1A7 7 0 0 0 12 3Z"/><circle cx="9.5" cy="11" r="1"/><circle cx="14.5" cy="11" r="1"/>',
+  gem: '<path d="M4 9l4-6h8l4 6-8 11Z"/><path d="M4 9h16"/><path d="M9 3l1.5 6L12 20"/><path d="M15 3l-1.5 6L12 20"/>',
+  heartBreak: '<path d="M12 20s-7-4.5-9-9.5C1.5 6.5 4 4 7 4c2 0 3.8 1.3 5 3 1.2-1.7 3-3 5-3 3 0 5.5 2.5 4 6.5-2 5-9 9.5-9 9.5Z"/><path d="M11 7l-2 3 3 2-1.5 3"/>',
+  gemCrown: '<path d="M4 18h16l-1.4-7-3.6 2.5-3-5-3 5-3.6-2.5Z"/><path d="M9 18l1 3h4l1-3"/>',
+  stairs: '<path d="M3 20V17H7V14h4V11h4V8h4V5"/><path d="M3 20h18"/>',
+  bolt: '<path d="M13 2 4 14h6l-1 8 9-12h-6Z"/>',
+  hourglass: '<path d="M6 3h12"/><path d="M6 21h12"/><path d="M7 3c0 4 3 5.5 5 6.3C9 10 7 11.6 7 15.6"/><path d="M17 3c0 4-3 5.5-5 6.3 3 .7 5 2.3 5 6.3"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+  stopwatch: '<circle cx="12" cy="13" r="8"/><path d="M9 2h6"/><path d="M12 2v3"/><path d="M12 9v4l3 2"/>',
+  spellbook: '<path d="M4 5c3-1.5 6-1.5 8 0v14c-2-1.5-5-1.5-8 0Z"/><path d="M20 5c-3-1.5-6-1.5-8 0v14c2-1.5 5-1.5 8 0Z"/><path d="M12 9l1.3 2.6L16 12l-2.7.4L12 15l-1.3-2.6L8 12l2.7-.4Z"/>',
+  crystals: '<path d="M8 3 5 9l3 7 3-7Z"/><path d="M16 7l-2.5 4.5L16 16l2.5-4.5Z"/>',
+  relicUrn: '<path d="M9 3h6"/><path d="M10 3v3c0 1.3-2 2-2 5.5S9 18 12 18s4-2.7 4-6.5S14 7.3 14 6V3"/><path d="M8 18h8l-1 3H9Z"/>',
+  chest: '<rect x="3.5" y="10" width="17" height="9" rx="1.5"/><path d="M3.5 14h17"/><path d="M9 10c0-3 1.3-5 3-5s3 2 3 5"/><circle cx="12" cy="14" r="1"/>',
+  coin: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9"/><path d="M9.5 9.3c0-1 1-1.8 2.5-1.8s2.5.8 2.5 1.8-1 1.5-2.5 1.9S9.5 11.9 9.5 13s1 1.8 2.5 1.8 2.5-.8 2.5-1.8"/>',
+  coinStack: '<ellipse cx="12" cy="18" rx="8" ry="2.5"/><ellipse cx="12" cy="13.5" rx="8" ry="2.5"/><ellipse cx="12" cy="9" rx="8" ry="2.5"/><path d="M4 9v9"/><path d="M20 9v9"/>',
+  pulse: '<path d="M2 12h4l2-6 4 12 2-6h8"/>',
+  echo: '<circle cx="12" cy="12" r="2.2"/><path d="M8.5 12a3.5 3.5 0 0 1 7 0"/><path d="M5.8 12a6.2 6.2 0 0 1 12.4 0"/><path d="M3 12a9 9 0 0 1 18 0"/>',
+  treasureMap: '<path d="M4 5l5-2 6 2 5-2v16l-5 2-6-2-5 2Z"/><path d="M9 3v16"/><path d="M15 5v16"/><path d="M12 9l1.6 1.6M13.6 9 12 10.6"/>',
+  gemStar: '<path d="M12 3 7 9l5 12 5-12Z"/><path d="M7 9h10"/><path d="M9.5 9 12 3l2.5 6"/>',
+  singleFigure: '<circle cx="12" cy="7" r="3"/><path d="M6 20c0-3.8 2.7-6.5 6-6.5s6 2.7 6 6.5"/>',
+  fourFigures: '<circle cx="5" cy="7" r="1.8"/><circle cx="12" cy="6" r="2"/><circle cx="19" cy="7" r="1.8"/><circle cx="12" cy="13.5" r="2"/><path d="M1.5 19c0-2.6 1.6-4.5 3.5-4.5"/><path d="M22.5 19c0-2.6-1.6-4.5-3.5-4.5"/><path d="M6.5 19c0-2.8 2.3-4.8 5.5-4.8s5.5 2 5.5 4.8"/><path d="M8 19c0-2.8 1.8-4.8 4-4.8"/>',
+  fist: '<path d="M7 11V8a2 2 0 1 1 4 0v3"/><path d="M11 10.5V7.5a2 2 0 1 1 4 0v3.5"/><path d="M15 11V8.5a1.8 1.8 0 1 1 3.6 0V14c0 3.5-2.3 6-6.1 6-3.3 0-5-1.3-6.5-3.3L4 13.5c-.6-.8-.3-1.8.6-2.1.7-.3 1.4 0 1.8.6L7 13"/>',
+  trophy: '<path d="M7 4h10v5a5 5 0 0 1-10 0Z"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M10 18h4"/><path d="M12 14v4"/><path d="M8 21h8"/>'
+};
+
+// ---------------------------------------------------------------
+// 40 Beispiel-Achievements, 1:1 aus FEATURE_WISHLIST.md übernommen.
+// ---------------------------------------------------------------
+const ACHIEVEMENTS = [
+  { title: 'Erste Schritte', cond: 'Erste Expedition abgeschlossen (Sieg oder finale Niederlage)', icon: 'footprint', binary: true },
+  { title: 'Erstlingswerk', cond: 'Ersten Erzfeind besiegt', icon: 'sword', binary: true },
+  { title: 'Clean Run', cond: 'Expedition ohne eine einzige Niederlage gewonnen', icon: 'shieldCheck', binary: true },
+  { title: 'Comeback', cond: 'Erzfeind nach mind. 3 gescheiterten Versuchen besiegt', icon: 'phoenix', binary: true },
+  { title: 'Hartnäckig', cond: 'Nach einer finalen Niederlage direkt eine neue Expedition gestartet', icon: 'chainBreak', binary: true },
+  { title: 'Veteran', cond: 'Insgesamt 50 abgeschlossene Expeditionen', icon: 'laurel', target: 50 },
+  { title: 'Serientäter', cond: '5 Expeditionen in Folge mit mind. einem Sieg abgeschlossen', icon: 'flame', target: 5 },
+  { title: 'Vollständige Besetzung', cond: 'Alle 41 Magier mindestens einmal gespielt', icon: 'crowd', target: 41 },
+  { title: 'Stammspieler', cond: 'Denselben Magier in 10 Expeditionen gespielt', icon: 'anchor', target: 10 },
+  { title: 'S-Tier-Elite', cond: 'Expedition nur mit Tier-S-Magiern gewonnen', icon: 'star', binary: true },
+  { title: 'Underdog', cond: 'Expedition nur mit Tier-D-Magiern gewonnen', icon: 'slingshot', binary: true },
+  { title: 'Gemischtes Team', cond: 'Vier Magier aus vier unterschiedlichen Tier-Stufen gewonnen', icon: 'puzzle', binary: true },
+  { title: 'Nemesis-Bezwinger', cond: 'Jeden der 29 Erzfeinde mindestens einmal besiegt', icon: 'crown', target: 29 },
+  { title: 'Großmeister', cond: 'Alle 4 Erzfeinde derselben Expedition besiegt', icon: 'crossedSwords', binary: true },
+  { title: 'Höchste Stufe', cond: 'Erzfeind mit Schwierigkeit 9 (XaxosAscended) besiegt', icon: 'mountain', binary: true },
+  { title: 'Einstieg gemeistert', cond: 'Erzfeind mit Schwierigkeit 1 (Bladius) ohne Fehlversuch besiegt', icon: 'shieldSimple', binary: true },
+  { title: 'Finale erreicht', cond: 'Erzfeind mit Expeditionswertung 4 besiegt', icon: 'flag', binary: true },
+  { title: 'Härtetest', cond: 'In einer Expedition mind. einen Erzfeind mit Schwierigkeit ≥ 7 besiegt', icon: 'skull', binary: true },
+  { title: 'Perfektionist', cond: 'Erzfeind beim ersten Versuch besiegt', icon: 'gem', binary: true },
+  { title: 'Zäher Gegner', cond: 'Erzfeind mit 80+ Leben besiegt', icon: 'heartBreak', binary: true },
+  { title: 'Kronjuwel', cond: 'HollowCrown besiegt', icon: 'gemCrown', binary: true },
+  { title: 'Alle Schwierigkeitsgrade', cond: 'Mind. einen Erzfeind aus jeder Schwierigkeitsstufe (1–9) besiegt', icon: 'stairs', target: 9 },
+  { title: 'Blitzsieg', cond: 'Erzfeind in unter 15 Minuten besiegt', icon: 'bolt', binary: true },
+  { title: 'Ausdauer', cond: 'Einzelner Kampf dauert über 60 Minuten und wird gewonnen', icon: 'hourglass', binary: true },
+  { title: 'Marathon', cond: 'Gesamtspielzeit einer Expedition über 3 Stunden', icon: 'clock', binary: true },
+  { title: 'Speedrun', cond: 'Komplette Expedition in unter 90 Minuten gewonnen', icon: 'stopwatch', binary: true },
+  { title: 'Zauberkundig', cond: '10 verschiedene Zauber mindestens einmal erworben', icon: 'spellbook', target: 10 },
+  { title: 'Kristallsammler', cond: '10 verschiedene Kristalle mindestens einmal erworben', icon: 'crystals', target: 10 },
+  { title: 'Artefaktjäger', cond: '10 verschiedene Artefakte (Relic) mindestens einmal erworben', icon: 'relicUrn', target: 10 },
+  { title: 'Vollständiges Arsenal', cond: 'Je eine Karte aus Zauber/Kristall/Relic in einer Expedition erworben', icon: 'chest', binary: true },
+  { title: 'Schnäppchenjäger', cond: 'Expedition nur mit Karten der Kostenstufe ≤ 4 gewonnen', icon: 'coin', binary: true },
+  { title: 'Großinvestor', cond: 'Karte mit Kostenstufe 9 erworben', icon: 'coinStack', binary: true },
+  { title: 'Impuls-Spezialist', cond: '5 Karten mit Keyword „pulse“ in einer Expedition erworben', icon: 'pulse', target: 5 },
+  { title: 'Echo-Meister', cond: '5 Karten mit Keyword „echo“ in einer Expedition erworben', icon: 'echo', target: 5 },
+  { title: 'Schatzsucher', cond: 'Mind. einen Schatz jeder Stufe (1–3) in einer Expedition erhalten', icon: 'treasureMap', target: 3 },
+  { title: 'Höchste Weihe', cond: 'Einen Schatz der Stufe 3 erhalten', icon: 'gemStar', binary: true },
+  { title: 'Solistin', cond: 'Expedition mit 2 Spielern gewonnen', icon: 'singleFigure', binary: true },
+  { title: 'Volle Gruppe', cond: 'Expedition mit 4 Spielern gewonnen', icon: 'fourFigures', binary: true },
+  { title: 'Ohne Erleichterung', cond: 'Expedition im normalen Schwierigkeitsgrad gewonnen', icon: 'fist', binary: true },
+  { title: 'Punktejäger', cond: 'Bisherigen Punkte-Rekord übertroffen', icon: 'trophy', binary: true }
+];
+
+function badgeHtml(a, state) {
+  // state: 'locked-partial' | 'locked-empty' | 'complete'
+  const isComplete = state === 'complete';
+  const svg = `<svg viewBox="0 0 24 24">${ICONS[a.icon] || ''}</svg>`;
+  let fillPct, label;
+  if (isComplete) {
+    fillPct = 100;
+    label = a.binary ? 'Erfüllt' : `${a.target} / ${a.target}`;
+  } else if (a.binary) {
+    fillPct = 0;
+    label = 'Noch nicht erfüllt';
+  } else {
+    const progress = Math.max(1, Math.round(a.target * (state === 'locked-partial' ? 0.6 : 0)));
+    fillPct = Math.round((progress / a.target) * 100);
+    label = `${progress} / ${a.target}`;
+  }
+  return `
+    <div class="badge-card ${isComplete ? 'is-complete' : 'is-locked'}">
+      <div class="badge-card__icon-wrap">${svg}</div>
+      <div class="badge-card__title">${a.title}</div>
+      <div class="badge-card__condition">${a.cond}</div>
+      <div class="badge-fillbar">
+        <div class="badge-fillbar__track"><div class="badge-fillbar__fill" style="width:${fillPct}%"></div></div>
+        <div class="badge-fillbar__label">${label}</div>
+      </div>
+    </div>`;
+}
+
+// Zustands-Demo: ein zählbares Achievement in allen drei Zuständen
+const demoBase = ACHIEVEMENTS.find((a) => !a.binary) || ACHIEVEMENTS[0];
+document.getElementById('stateDemo').innerHTML = [
+  badgeHtml(demoBase, 'locked-empty'),
+  badgeHtml(ACHIEVEMENTS.find((a) => a.binary), 'locked-empty'),
+  badgeHtml(demoBase, 'complete')
+].join('');
+
+// Alle 40, Zustände zur Demonstration durchmischt (jedes 4. golden, jedes 2. mit Teilfortschritt)
+document.getElementById('badgeGrid').innerHTML = ACHIEVEMENTS.map((a, i) => {
+  const state = i % 4 === 0 ? 'complete' : (i % 2 === 0 ? 'locked-partial' : 'locked-empty');
+  return badgeHtml(a, state);
+}).join('');
+</script>
+
+</body>
+</html>

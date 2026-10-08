@@ -1,0 +1,2602 @@
+:root {
+  --void: #0e0d14;
+  --deep: #171a2e;
+  --deep-2: #1f2340;
+  --aetherium: #7c5cff;
+  --aetherium-dim: #5a41b8;
+  --breach: #34d0c4;
+  --parchment: #e8e1cf;
+  --parchment-dim: #b9b2a0;
+  --ember: #c1443b;
+  --line: rgba(232, 225, 207, 0.14);
+  /* Punkt 25: eigene Statusfarbe für besiegte Erzfeinde (grün), unabhängig von --select
+     (Karten-Auswahl-Indikator), damit beide Bedeutungen visuell nicht verschmelzen. */
+  --verdant: #4caf6d;
+  --verdant-dim: #1c3a24;
+  /* Auswahl-Indikator für Karten: bewusst unabhängig von den Kartentyp-Farben (--color-*),
+     damit "ausgewählt" immer klar erkennbar bleibt, egal welche Subtyp-Einfärbung die Karte hat. */
+  --select: #57d768;
+
+  /* Einheitliche Kartentyp-Palette (Punkt 3/6). Kristall/Relic/Zauber orientieren sich an den
+     Original-Randomizer-Tönen (siehe Kommentar bei AEONS_DATA.marketSetups in data.js); die
+     Schatz-Stufen greifen die Original-treasureColors aus mainTheme.ts auf (Stufe I = Bronze/Kupfer,
+     Stufe II = Indigo/Violett, Stufe III = Gold) und sind tonal an Kristall/Relic/Zauber angepasst.
+     Angriff/Plan/Monster (Nemesis-Kartentypen, Punkt 6) sind neu definiert, aber im selben
+     Sättigungs-/Helligkeitsbereich gehalten, damit alle Kategorien harmonisch wirken. */
+  --color-zauber: #eedb96;
+  --color-zauber-dim: #3c3520;
+  --color-kristall: #8ebbcc;
+  --color-kristall-dim: #22373f;
+  --color-relic: #94c1f4;
+  --color-relic-dim: #1f2f42;
+  /* Werte aus card-component-preview.html übernommen (Nutzer-Vorgabe): näher an der
+     Kristall/Relic/Zauber-Sättigung als die vorherigen Platzhalterfarben. */
+  --color-schatz-1: #d6c785;
+  --color-schatz-1-dim: #3c3720;
+  --color-schatz-1-shard: #bda9d1;
+  --color-schatz-1-shard-dim: #33283e;
+  --color-schatz-1-spell: #d6c785;
+  --color-schatz-1-spell-dim: #3c3720;
+  --color-schatz-2: #6ac8bf;
+  --color-schatz-2-dim: #1c3b38;
+  --color-schatz-3: #ebbf47;
+  --color-schatz-3-dim: #413516;
+  /* Nutzer-Vorschlag (Angriff #d5c4d4/Plan #fef192/Monster #fdfffd) tonal an die bestehende
+     Farbskala angeglichen: gleiche Sättigungs-/Helligkeitsliga wie Zauber/Kristall/Relic statt der
+     vom Nutzer vorgeschlagenen sehr blassen/entsättigten Werte, die auf dunklem Grund kaum
+     Kontrast/Charakter gehabt hätten. Zusätzlich Angriff/Monster deutlich im Farbton auseinander-
+     gezogen (Nutzer-Feedback: beide lagen sich vorher zu nahe) — Plan=Gelb (H53°), Angriff=Pink/
+     Magenta (H330°), Monster=Lila (H288°, Nutzer-Wunsch statt Grün) — gleichmäßig über den
+     Farbkreis verteilt statt benachbart. */
+  --color-angriff: #d3699e;
+  --color-angriff-dim: #381e2b;
+  --color-plan: #d3c769;
+  --color-plan-dim: #38351e;
+  --color-monster: #b56bc7;
+  --color-monster-dim: #331e38;
+
+  /* Magier-Karte ("lang"): eigener, kühl-metallischer Ton, bewusst abgesetzt von den warmen
+     Zauber/Schatz-Farben und dem satten Kristall/Relic/Monster-Violett/Blau. */
+  --color-magier: #9fb2c8;
+  --color-magier-dim: #232b36;
+
+  /* Tier-Rating Magier (aus card-component-preview.html übernommen): rein kosmetisches Label zur
+     Einschätzung der Magier-Stärke bei der Charakterauswahl — keine Spiellogik daran gebunden.
+     S (Gold) > A (Grün) > B (Türkis) > C (Amber) > D (Rot). */
+  --tier-s: #ffd54f;
+  --tier-a: #57d768;
+  --tier-b: #34d0c4;
+  --tier-c: #e0b968;
+  --tier-d: #b5453d;
+
+  /* Einheitliche Kartengröße: EINZIGE Quelle der Wahrheit für die Maße jeder auswählbaren
+     Karten-Komponente (.card) UND ihres Flip-Platzhalters (.flipcard, siehe Punkt 27). Beide
+     Regeln referenzieren ausschließlich diese Variablen, statt die Maße als eigene Literale zu
+     duplizieren — so kann der verdeckte Platzhalter nie von der aufgedeckten Karte abweichen. */
+  --card-w: 240px;
+  --card-h: 300px;
+
+  /* Gemeinsame Kartengröße für die drei Tablet-Kampf-Overlays (Reihenfolgedeck, Ablagestapel,
+     Zurückmischen-Auswahl) — Nutzerwunsch 2026-09-25, dass alle drei gleich groß wirken. Analog zum
+     --card-w/--card-h-Muster oben: EINZIGE Quelle der Wahrheit, siehe [[aeons_end_tord_overlay_card_size]]
+     und [[aeons_end_tablet_kampf_optimierung]] Punkt 3 (Refactoring 2026-10-06, vorher drei separate
+     --tc-w/--tc-h-Literale). */
+  --tord-overlay-card-w: 192px;
+  --tord-overlay-card-h: 268px;
+
+  /* Aeons-End-Schriftfamilie (aus card-component-preview.html übernommen): Friz Quadrata Bold für
+     Titel/Überschriften, Charter Roman für Fließtext — beide lizenzpflichtig bzw. nur als
+     System-Font vorhanden, daher mit optisch nahen, frei verfügbaren Ersatzschriften als Fallback.
+     Wirkt global, weil bereits die gesamte Anwendung über --serif-display/--serif-body läuft. */
+  --serif-display: 'Friz Quadrata', 'Friz Quadrata Bold', Copperplate, 'Cinzel', 'Cormorant Garamond', Georgia, serif;
+  --serif-body: Charter, 'Bitstream Charter', 'Source Serif 4', Georgia, serif;
+  --sans: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--void);
+  color: var(--parchment);
+  font-family: var(--sans);
+  min-height: 100vh;
+}
+
+body {
+  background-image:
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(124,92,255,0.16), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 10%, rgba(52,208,196,0.08), transparent 60%);
+  background-repeat: no-repeat;
+}
+
+h1, h2, h3 { font-family: var(--serif-display); font-weight: 600; margin: 0; }
+
+a { color: var(--breach); }
+
+/* Top progress bar */
+.sigilbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 28px;
+  /* iPhone/iPad als Home-Bildschirm-App (black-translucent + viewport-fit=cover): Inhalt läuft sonst
+     unter Statusleiste/Notch (Uhrzeit überlagert den Titel). Sichere Ränder oben/links/rechts
+     einrechnen — der Balken-Hintergrund reicht weiterhin bis an den Bildschirmrand. */
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  padding-left: calc(28px + env(safe-area-inset-left, 0px));
+  padding-right: calc(28px + env(safe-area-inset-right, 0px));
+  background: rgba(14,13,20,0.86);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.sigilbar__brand {
+  font-family: var(--serif-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+/* Titel links ist der Weg zur Startseite (ersetzt den früheren "Zur Startseite"-Button). */
+.sigilbar__brand--link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: var(--parchment);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.sigilbar__logo { width: 28px; height: 28px; display: block; flex-shrink: 0; }
+.sigilbar__brand--link:hover, .sigilbar__brand--link:focus-visible { color: var(--breach); outline: none; }
+.sigilbar__steps {
+  display: flex;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+}
+.sigilbar__steps li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--parchment-dim);
+}
+.sigilbar__steps li .glyph {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif-display);
+  font-size: 0.8rem;
+}
+.sigilbar__steps li.done .glyph { background: var(--aetherium); border-color: var(--aetherium); color: #fff; }
+.sigilbar__steps li.active .glyph { border-color: var(--breach); color: var(--breach); }
+.sigilbar__steps li.active { color: var(--parchment); }
+
+/* Aufbau-Fortschrittsanzeige (4 Schritte: Charakterauswahl → Marktplatz →
+   Nemesis-Vorbereitung → Erzählung generieren), sitzt oberhalb der jeweiligen
+   .section-title-Überschrift auf den 4 Aufbau-Screens. Reines Fortschritts-
+   Feedback, keine eigene Navigation. */
+.build-progress {
+  display: flex;
+  align-items: center;
+  margin-bottom: 22px;
+}
+.build-progress__step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+.build-progress__circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--serif-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--parchment-dim);
+  background: rgba(255, 255, 255, 0.03);
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+.build-progress__label {
+  font-size: 0.82rem;
+  color: var(--parchment-dim);
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.build-progress__line {
+  flex: 1 1 32px;
+  min-width: 20px;
+  height: 1px;
+  background: var(--line);
+  margin: 0 12px;
+  transition: background 0.2s;
+}
+.build-progress__line.is-done { background: var(--aetherium); }
+.build-progress__step--done .build-progress__circle { background: var(--aetherium); border-color: var(--aetherium); color: #fff; }
+.build-progress__step--active .build-progress__circle { border-color: var(--breach); color: var(--breach); }
+.build-progress__step--active .build-progress__label { color: var(--parchment); }
+@media (max-width: 720px) {
+  .build-progress__label { display: none; }
+  .build-progress { margin-bottom: 16px; }
+}
+
+main#app {
+  /* Punkt: Kartenraster (Aufbau — Marktplatz-Vorschau, Kaserne-Marktplatz) soll bis zu 4
+     Karten pro Zeile zeigen statt 3. .card ist 240px breit, .chipgrid/.market-grid haben
+     10px Gap -> 4*240 + 3*10 = 990px Inhaltsbreite nötig. Die Marktplatz-Raster stecken
+     zusätzlich in .panel (26px/28px Innenabstand) innerhalb von main#app (28px Innenabstand),
+     daher entsprechend breiterer Rahmen als vorher (880px, das nur für ~3 Karten reichte). */
+  max-width: 1104px;
+  margin: 0 auto;
+  padding: 56px 28px 100px;
+  /* Home-Bildschirm-App: Seitenränder (Querformat/Notch) und Home-Indikator unten freihalten. */
+  padding-left: calc(28px + env(safe-area-inset-left, 0px));
+  padding-right: calc(28px + env(safe-area-inset-right, 0px));
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+}
+/* Startseite (Topbar ausgeblendet): Statusleiste/Dynamic Island darf den Titel nicht überdecken. */
+body:has(#topbar[hidden]) main#app {
+  padding-top: calc(56px + env(safe-area-inset-top, 0px));
+}
+/* Tablet-Kampf-Detail-Screen (Tablet-Modus aktiviert, #combatTabletView sichtbar): das 3-Spalten-
+   Grid ist bereits knapp bemessen (siehe Kommentare in renderBattle()) — der übliche 56px-
+   Abstand oben verschwendet dort Platz, daher hier auf 0 reduziert. :has() statt einer JS-
+   gesetzten Klasse, da main#app sich nicht je Screen ändert. */
+main#app:has(#screen-battle:not([hidden]) #combatTabletView:not([hidden])) {
+  /* Topbar ist hier ausgeblendet (siehe renderScreen()) — nur den sicheren Rand oben freihalten. */
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.screen[hidden] { display: none; }
+
+/* Hero */
+.hero { margin-bottom: 48px; }
+.hero__kicker {
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--breach);
+  margin: 0 0 14px;
+}
+.hero__title {
+  font-size: 3.1rem;
+  line-height: 1.08;
+  margin-bottom: 20px;
+}
+.hero__lede {
+  font-family: var(--serif-body);
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: var(--parchment-dim);
+  max-width: 62ch;
+}
+
+.section-title { font-size: 2.2rem; margin-bottom: 12px; }
+.section-lede {
+  font-family: var(--serif-body);
+  color: var(--parchment-dim);
+  max-width: 68ch;
+  line-height: 1.55;
+  margin-bottom: 32px;
+}
+
+.section-lede--flavor {
+  font-style: italic;
+  margin-bottom: 8px;
+}
+
+/* Panels */
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 26px 28px;
+  margin-bottom: 24px;
+  background: linear-gradient(180deg, rgba(124,92,255,0.03), transparent 40%);
+}
+.panel__title {
+  font-family: var(--serif-display);
+  font-weight: 600;
+  font-size: 1.4rem;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.panel__hint {
+  font-family: var(--serif-body);
+  color: var(--parchment-dim);
+  font-size: 0.98rem;
+  margin: 0 0 18px;
+  max-width: 64ch;
+}
+/* Hinweis bei erreichter Max-3-Sperre für "Neue Expedition" (siehe updateNewExpeditionAvailability()
+   in app.js) — bewusst in --ember (Warnfarbe), damit er sich vom neutralen panel__hint abhebt. */
+.panel__hint--warning { color: var(--ember); }
+.group-label {
+  font-size: 1.02rem;
+  color: var(--parchment-dim);
+  font-weight: 500;
+  margin: 22px 0 10px;
+  font-family: var(--serif-display);
+}
+.group-label:first-of-type { margin-top: 4px; }
+/* Punkt 26: kleinere Unter-Überschrift für Kaserne-Untergruppen (z.B. je Marktplatz-Subtyp
+   oder je Schatzstufe innerhalb der Kaserne-Sektionen). */
+.group-label--sub {
+  font-size: 0.88rem;
+  color: var(--parchment-dim);
+  font-weight: 500;
+  margin: 12px 0 8px;
+  font-family: var(--serif-display);
+  opacity: 0.85;
+}
+
+/* Punkt 41: visueller Hinweis in der Kaserne, wenn eine Sektion (Party/Marktplatz/Schätze)
+   noch nicht den Regeln entspricht — verhindert die Navigation in den nächsten Kampf. */
+.barracks-group { padding: 4px 10px; margin: 0 -10px; border-radius: 10px; transition: background 0.3s, box-shadow 0.3s; }
+.barracks-group--attention {
+  background: rgba(199, 74, 58, 0.08);
+  box-shadow: 0 0 0 1px var(--ember);
+  animation: barracks-attention-pulse 1.4s ease-in-out 2;
+}
+@keyframes barracks-attention-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px var(--ember); }
+  50% { box-shadow: 0 0 0 3px var(--ember); }
+}
+.barracks-group__warn {
+  color: var(--ember);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.count-badge {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--breach);
+}
+
+/* Field inputs */
+.field-row { display: flex; gap: 16px; flex-wrap: wrap; }
+/* Punkt 30a: mehr Luft zwischen zwei gestapelten Zeilen (z.B. Name/Marktplatz-Setup und Seed/
+   Spieleranzahl auf "Neue Expedition erzeugen") statt der bisher fehlenden vertikalen Abstands. */
+.field-row + .field-row { margin-top: 18px; }
+.field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 220px; }
+.field--narrow { flex: 0 0 260px; }
+.field span { font-size: 0.85rem; color: var(--parchment-dim); }
+.field input {
+  background: var(--deep);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 10px 12px;
+  color: var(--parchment);
+  font-family: var(--sans);
+  font-size: 0.95rem;
+}
+.field input:focus {
+  outline: 2px solid var(--aetherium);
+  outline-offset: 1px;
+}
+/* <select>-Elemente übernahmen bisher die weiße Browser-Voreinstellung (siehe Screenshot) —
+   jetzt im selben dunklen Feld-Look wie .field input, inkl. eigenem Pfeil-Icon in Parchment-Ton. */
+.field select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: var(--deep);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0L5 6L10 0Z' fill='%23b9b2a0'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 10px 36px 10px 12px;
+  color: var(--parchment);
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.field select:focus {
+  outline: 2px solid var(--aetherium);
+  outline-offset: 1px;
+}
+.field select option {
+  background: var(--deep);
+  color: var(--parchment);
+}
+.prompt-textarea {
+  background: var(--deep);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 12px 14px;
+  color: var(--parchment);
+  font-family: var(--serif-body);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  resize: vertical;
+  width: 100%;
+}
+.prompt-textarea:focus {
+  outline: 2px solid var(--aetherium);
+  outline-offset: 1px;
+}
+.prompt-textarea[readonly] { color: var(--parchment-dim); }
+
+/* Chip selection grid */
+.chipgrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.chip {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  background: rgba(255,255,255,0.02);
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  user-select: none;
+}
+.chip:hover { border-color: var(--aetherium-dim); }
+.chip.selected {
+  border-color: var(--aetherium);
+  background: rgba(124,92,255,0.14);
+  box-shadow: 0 0 0 1px var(--aetherium) inset;
+}
+.chip.disabled { opacity: 0.35; cursor: not-allowed; }
+/* Name/Titel-Zeile: global gleicher Titel-Font wie .card__name (--serif-display), statt des
+   generischen --sans, den .chip zuvor für alles (auch den Namen) geerbt hat. Betrifft Magier-
+   Auswahl-Chips und die verbesserten Nemesis-Karten (.chip--nemesis). */
+.chip__name {
+  font-family: var(--serif-display);
+  font-size: 1rem;
+}
+.chip .chip__sub {
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--parchment-dim);
+  margin-top: 2px;
+}
+.chip.selected .chip__sub { color: var(--breach); }
+
+/* Nemesis-Vorbereitung (schmale Rechtecke statt großer Karten, wie vorher): normale .chip-Pille,
+   nur mit typ-abhängiger Akzentfarbe statt dem einheitlichen --line-Rahmen. --accent/--accent-dim
+   werden inline über cardAccentStyle() gesetzt (siehe renderBuildNemesis() in app.js). */
+.chip--nemesis {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  cursor: default;
+}
+/* siehe #screen-build-market .card oben: dieselbe Vorschau-ohne-Interaktion-Logik für die
+   Nemesis-Vorbereitung — der generische .chip:hover-Rahmenfarbwechsel soll hier nicht greifen. */
+#screen-build-nemesis .chip--nemesis:hover { border-color: var(--accent); }
+.chip--nemesis .chip__sub { color: var(--accent); }
+
+/* Erweiterungs-Auswahl (Optionen): Hover/Select/Deselect analog zur Marktplatz-Kartenauswahl
+   (.card:hover / .card.selected / .card.disabled), aber als kompakte Pille beibehalten statt
+   auf die große .card-Form umzustellen. Bewusst auf #optionsExpansionGroups gescopt, damit
+   andere .chip-Verwendungen (Magier-Auswahl, Nemesis-Vorbereitung) unverändert bleiben. */
+#optionsExpansionGroups .chip:hover { transform: translateY(-2px); }
+#optionsExpansionGroups .chip.selected {
+  border-color: var(--select);
+  background: rgba(124,92,255,0.14);
+  box-shadow: 0 0 0 2px var(--select) inset, 0 0 16px -2px var(--select);
+  padding-right: 34px;
+}
+#optionsExpansionGroups .chip.selected::before {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--select);
+  color: #0e0d14;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#optionsExpansionGroups .chip:not(.selected) { opacity: 0.6; filter: grayscale(0.3); }
+#optionsExpansionGroups .chip:not(.selected):hover { opacity: 0.85; filter: grayscale(0.1); }
+
+.chipgrid--mages .chip { min-width: 160px; }
+.chipgrid--mini { margin: 6px 0 4px 18px; padding-left: 12px; border-left: 1px solid var(--line); }
+.chipgrid--mini .chip { font-size: 0.86rem; padding: 7px 13px; }
+
+/* Tier-Rating Magier: rundes Label oben rechts auf dem Chip. Rein kosmetisch, dient den
+   Spielern nur als Einschätzungshilfe bei der Charakterauswahl — keine Spiellogik hängt daran. */
+.chip__tier {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif-display);
+  font-size: 0.86rem;
+  color: var(--void);
+  border: 1px solid rgba(0,0,0,0.3);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+  z-index: 2;
+}
+.chip__tier--S { background: var(--tier-s); }
+.chip__tier--A { background: var(--tier-a); }
+.chip__tier--B { background: var(--tier-b); }
+.chip__tier--C { background: var(--tier-c); }
+.chip__tier--D { background: var(--tier-d); color: var(--parchment); }
+
+/* Magier "lang": volle Kartenkomponente analog Zauber/Kristall/Relic/Schatz — genutzt in der
+   Charakterauswahl (Magier-Vorschläge) und in der Kaserne (Party). Titel-Zeile (Name) belegt
+   Zeile 1 statt der globalen Zeile 2 (dort steht bei den anderen Kartentypen normalerweise die
+   Kosten-Zeile, die Magier nicht haben); Untertitel (Rolle) bekommt eine eigene, kleinere Zeile 2
+   direkt darunter. */
+.card--mage .card__name { grid-row: 1; }
+.card__title {
+  grid-row: 2;
+  font-family: var(--serif-body);
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+  color: var(--accent); /* gleiche Farbe wie der Magiername (.card__name) */
+  margin-top: -4px;
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 1;
+}
+/* Tier-Rating: rundes Badge oben rechts *innerhalb* der Karte (die Karte hat overflow:hidden wegen
+   des Hintergrund-Symbols, ein am Rand überstehendes Badge wie beim Chip würde daher abgeschnitten).
+   Rein informell — keine Spiellogik hängt daran. */
+.card__tier {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif-display);
+  font-size: 0.92rem;
+  color: var(--void);
+  border: 1px solid rgba(0,0,0,0.3);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+  z-index: 2;
+}
+.card__tier--S { background: var(--tier-s); }
+.card__tier--A { background: var(--tier-a); }
+.card__tier--B { background: var(--tier-b); }
+.card__tier--C { background: var(--tier-c); }
+.card__tier--D { background: var(--tier-d); color: var(--parchment); }
+
+/* Tier-Liste in den Optionen: Drag&Drop-Board mit 5 Zeilen (S/A/B/C/D). */
+.tierboard { display: flex; flex-direction: column; gap: 12px; }
+.tierrow {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.tierrow__label {
+  flex: 0 0 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif-display);
+  font-size: 1.5rem;
+  color: var(--void);
+}
+.tierrow--S .tierrow__label { background: var(--tier-s); }
+.tierrow--A .tierrow__label { background: var(--tier-a); }
+.tierrow--B .tierrow__label { background: var(--tier-b); }
+.tierrow--C .tierrow__label { background: var(--tier-c); }
+.tierrow--D .tierrow__label { background: var(--tier-d); color: var(--parchment); }
+.tierrow__drop {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  min-height: 52px;
+  background: rgba(255,255,255,0.015);
+  transition: background 0.12s;
+}
+.tierrow__drop.is-dragover { background: rgba(124,92,255,0.14); }
+.chip--tier { cursor: grab; padding: 8px 14px; touch-action: none; }
+.chip--tier.is-dragging { opacity: 0.85; cursor: grabbing; box-shadow: 0 6px 16px rgba(0,0,0,0.45); }
+
+/* Buttons */
+.actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 32px;
+  justify-content: space-between;
+}
+.actions--end { justify-content: flex-end; }
+/* Punkt 28: Aufdecken-Button direkt unter der Gruppen-Überschrift — knapper Abstand statt der
+   für Screen-Fußzeilen gedachten 32px, und linksbündig statt space-between. */
+.actions--start { justify-content: flex-start; margin-top: 8px; margin-bottom: 12px; }
+/* Punkt 30b/30c: zusätzlicher Abstand nach unten für Buttons, die direkt über einem eigenständigen
+   Panel/Block sitzen (z.B. "Weiter ohne Erzählung" vor "1. Prompt kopieren", "Zeige Kaserne" vor
+   der Erzfeinde-Übersicht) — separate Modifier-Klasse, damit andere .actions--end-Stellen
+   (z.B. Kopieren-Button innerhalb eines Panels) unverändert bleiben. */
+.actions--gap-below { margin-bottom: 28px; }
+/* .actions setzt display:flex als Autoren-Regel, was das UA-Default [hidden]{display:none} sonst
+   überschreiben würde (z.B. bei per JS ein-/ausgeblendeten Actions-Leisten). Analog zu
+   .screen[hidden] oben explizit erzwungen. */
+.actions[hidden] { display: none; }
+/* Verschachtelte .actions (z.B. die Sieg/Niederlage-Buttons neben "Zurück zur Übersicht", oder die
+   rechte Button-Gruppe neben "Zurück" in der Nemesis-Vorbereitung) sollen sich nicht wie eine
+   eigene Fußzeile verhalten: ohne diese Regel erbt die verschachtelte .actions--end/
+   .actions--outcome-gap den 32px margin-top der äußeren .actions-Basisklasse, wodurch die äußere
+   Flex-Zeile (align-items: stretch, Default) höher wird und der alleinstehende "Zurück"-Button
+   sichtbar in die Höhe gezogen wird statt dieselbe Form wie die übrigen CTAs zu haben. */
+.actions .actions { margin-top: 0; }
+.btn {
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 12px 22px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: filter 0.15s, background 0.15s;
+}
+.btn--primary { background: var(--aetherium); color: #fff; }
+.btn--primary:hover { filter: brightness(1.1); }
+.btn--primary:disabled { background: var(--deep-2); color: var(--parchment-dim); cursor: not-allowed; }
+/* Generische Absicherung: jeder Button-Typ soll optisch erkennbar deaktiviert wirken, nicht nur
+   .btn--primary (z.B. falls künftig ein .btn--ghost-Button per disabled gesperrt wird). */
+.btn:disabled { opacity: 0.55; cursor: not-allowed; filter: none; }
+.btn--ghost { background: transparent; border-color: var(--line); color: var(--parchment); }
+.btn--ghost:hover { border-color: var(--aetherium-dim); }
+/* Sieg = grün (--verdant, dieselbe Statusfarbe wie besiegte Erzfeinde), Niederlage = rot
+   (--ember) — bisher war "Sieg" fälschlich in --ember (rot) eingefärbt. */
+.btn--victory { background: var(--verdant); color: #fff; }
+.btn--victory:hover { filter: brightness(1.12); }
+.btn--loss { background: var(--ember); color: #fff; }
+.btn--loss:hover { filter: brightness(1.12); }
+/* Sieg/Niederlage sollen gleich groß sein — ohne feste Breite wäre "Sieg" (4 Zeichen) schmaler
+   als "Niederlage" (10 Zeichen). min-width entspricht der natürlichen Breite von "Niederlage"
+   bei .btn-Padding (12px 22px); beide Buttons zentrieren ihren Text darin. */
+.btn--victory, .btn--loss { min-width: 132px; text-align: center; }
+.btn--small { padding: 6px 12px; font-size: 0.82rem; }
+/* etwas größerer Abstand zwischen Niederlage- und Sieg-Button (Punkt 38: liegen im inneren
+   .actions-Container zusammen mit "Zurück zur Übersicht"). */
+.actions--outcome-gap { gap: 22px; }
+
+.pool-summary {
+  font-size: 0.85rem;
+  color: var(--parchment-dim);
+  margin-top: 18px;
+  font-family: var(--sans);
+}
+
+/* Story layout */
+.story-layout {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+.story-rail {
+  flex: 0 0 190px;
+  position: sticky;
+  top: 90px;
+  border-right: 1px solid var(--line);
+  padding-right: 20px;
+}
+.story-rail h3 {
+  font-size: 0.95rem;
+  font-family: var(--serif-display);
+  color: var(--parchment-dim);
+  margin-bottom: 10px;
+}
+.story-rail .rail-mage {
+  font-size: 0.92rem;
+  padding: 4px 0;
+  color: var(--parchment);
+}
+.story-rail .rail-item {
+  font-size: 0.85rem;
+  color: var(--parchment-dim);
+  padding: 3px 0;
+  border-left: 2px solid transparent;
+  padding-left: 10px;
+  margin-left: -12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.story-rail .rail-item:hover,
+.story-rail .rail-item:focus-visible {
+  color: var(--parchment);
+  border-left-color: var(--aetherium-dim);
+}
+.story-rail .rail-item.current {
+  color: var(--breach);
+  border-left-color: var(--breach);
+}
+
+.story-page { flex: 1; min-width: 0; }
+
+.chapter {
+  margin-bottom: 52px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid var(--line);
+}
+.chapter:last-child { border-bottom: none; }
+.chapter__eyebrow {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--breach);
+  margin-bottom: 6px;
+}
+.chapter__title {
+  font-size: 2rem;
+  margin-bottom: 20px;
+}
+.chapter__body {
+  font-family: var(--serif-body);
+  font-size: 1.12rem;
+  line-height: 1.75;
+  max-width: 68ch;
+  white-space: pre-wrap;
+}
+.chapter__body p { margin: 0 0 1.1em; }
+.chapter__narration {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--parchment-dim);
+  font-family: var(--serif-body);
+  padding: 20px 0;
+}
+.loading__glyph {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  border-top-color: var(--breach);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ember);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 3px;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  max-width: 500px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+  z-index: 50;
+}
+
+/* ===================== V2-Erweiterungen ===================== */
+
+/* Gespeicherte Expeditionen */
+.expedition-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.expedition-row:last-child { border-bottom: none; }
+.expedition-row__name { font-family: var(--serif-display); font-size: 1.15rem; }
+.expedition-row__meta { font-family: var(--sans); font-size: 0.85rem; color: var(--parchment-dim); margin-top: 2px; }
+.expedition-row__actions { display: flex; gap: 10px; flex-shrink: 0; }
+
+/* Marktplatz-Karten (Kristall/Zauber/Relic) */
+.market-grid .market-chip { min-width: 190px; }
+.market-chip.new-card { border-color: var(--breach); box-shadow: 0 0 0 1px var(--breach) inset; }
+
+/* Große, informative Auswahlkarte (Punkt 4/5): Name, Kosten (mit Æther-Icon), Effekttext,
+   dezentes Typ-Symbol im Hintergrund. --accent/--accent-dim werden pro Karte inline über die
+   Kartentyp-Farbvariablen gesetzt (siehe cardAccentStyle() in app.js). Ersetzt die bisherigen
+   .chip .market-chip-Chips überall dort, wo Karten typisiert dargestellt werden. */
+/* Feste Kartengröße + feste Zonen (Name / Kosten / Effekt / Meta), damit alle Karten eines
+   Layouts exakt gleich groß sind und Inhalte immer an derselben Stelle sitzen. Der Effekttext
+   bekommt eine feste Höhe mit eigenem Scrollbereich statt die Karte zu strecken. Maße kommen aus
+   --card-w/--card-h (siehe :root) — dieselben Variablen nutzt .flipcard weiter unten, damit der
+   verdeckte Platzhalter beim Aufdecken (Sieg-Beute UND Niederlage-Unterstützung) niemals von der
+   tatsächlichen Kartengröße abweichen kann. */
+.card {
+  --accent: var(--parchment-dim);
+  --accent-dim: rgba(255,255,255,0.04);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent-dim);
+  padding: 14px 16px 12px;
+  width: var(--card-w);
+  height: var(--card-h);
+  flex: 0 0 var(--card-w);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 6px;
+  user-select: none;
+  box-sizing: border-box;
+}
+.card:hover { transform: translateY(-2px); }
+/* Die Kartenvorschau in der Aufbauphase (Marktplatz-Vorschau/Nemesis-Vorbereitung) ist reine
+   Information ohne Auswahl-Interaktion — Hover-Effekt und Pointer-Cursor der .card/.chip-
+   Basiskomponente hier bewusst deaktivieren, nur auf diesen beiden Screens. */
+#screen-build-market .card { cursor: default; }
+#screen-build-market .card:hover { transform: none; }
+/* Auswahl-Zustand bewusst NICHT über --accent (Kartentyp-Farbe), sondern über eine fixe,
+   kategorieunabhängige Farbe + Häkchen-Badge, damit ausgewählte Karten immer klar erkennbar
+   sind — unabhängig davon, welche Subtyp-Einfärbung die Karte gerade trägt. */
+.card.selected {
+  border-color: var(--select);
+  box-shadow: 0 0 0 2px var(--select) inset, 0 0 16px -2px var(--select);
+}
+.card.selected::before {
+  content: '✓';
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--select);
+  color: #0e0d14;
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+/* Sieg — Marktplatz ausgleichen: die ausgewählte Karte verlässt hier den aktiven Marktplatz und
+   wandert in die Kaserne (siehe confirmWinBanish()) — ein grünes Häkchen würde "bleibt aktiv"
+   suggerieren, das Gegenteil ist der Fall. Daher eigene Markierung: roter Rahmen + "×" statt
+   grünem Rahmen + "✓". Bewusst als eigene Klasse (nicht .selected), damit Party-/Kaserne-/
+   Schatzauswahl (dort ist Auswahl = "bleibt/wird genutzt") unverändert bleiben. */
+.card.card--banish-pick {
+  border-color: var(--ember);
+  box-shadow: 0 0 0 2px var(--ember) inset, 0 0 16px -2px var(--ember);
+}
+.card.card--banish-pick::before {
+  content: '×';
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ember);
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+/* Punkt 33: .card--story-relevant wird in app.js weiterhin auf den Schatzkandidaten gesetzt, den
+   die Gruppe in der Erzählung tatsächlich wählt (Story-Logik "verwende Schätze zur Erzählung"
+   bleibt bestehen) — bewusst ohne eigene visuelle Markierung im Frontend (kein Stern-Badge mehr). */
+.card.disabled { opacity: 0.35; cursor: not-allowed; filter: grayscale(0.4); }
+.card.disabled:hover { transform: none; }
+.card.new-card { border-color: var(--breach); box-shadow: 0 0 0 1px var(--breach) inset; }
+
+/* Punkt 27: Beute-Reveal ("Booster Pack") — Flip-Karten mit Rückseite/Vorderseite.
+   .flipcard hat exakt die Maße von .card; .flipcard__inner dreht sich per 3D-Transform,
+   die beiden Faces sind absolut positioniert und decken sich exakt (backface-visibility:hidden
+   sorgt dafür, dass jeweils nur eine Seite sichtbar ist). transition-delay wird inline pro Karte
+   gesetzt, um die gestaffelte Gruppen-Animation (Zauber/Kristall/Relic) zu erzeugen. */
+.flipcard {
+  width: var(--card-w);
+  height: var(--card-h);
+  flex: 0 0 var(--card-w);
+  perspective: 1200px;
+}
+.flipcard__inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.flipcard--revealed .flipcard__inner { transform: rotateY(180deg); }
+.flipcard__face {
+  position: absolute;
+  inset: 0;
+  width: var(--card-w);
+  height: var(--card-h);
+  backface-visibility: hidden;
+  box-sizing: border-box;
+}
+.flipcard__face--front,
+.flipcard__face--front:hover { transform: rotateY(180deg); margin: 0; width: 100%; height: 100%; cursor: default; }
+.flipcard__face--back {
+  border: 1px solid var(--parchment-dim);
+  border-radius: 6px;
+  background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.06), rgba(0,0,0,0.18));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.flipcard__sigil {
+  font-size: 2.4rem;
+  color: var(--parchment-dim);
+  opacity: 0.55;
+}
+.card.new-card.selected { box-shadow: 0 0 0 2px var(--select) inset, 0 0 16px -2px var(--select); }
+.card.new-card.card--banish-pick { box-shadow: 0 0 0 2px var(--ember) inset, 0 0 16px -2px var(--ember); }
+/* Schätze-Reveal auf screen-win-banish (2026-09-26, übernommen aus dem ausgebauten
+   screen-win-reward): der Auswahl-Zustand (.selected) sitzt hier auf dem äußeren .flipcard-Wrapper
+   statt auf .card, weil die Kartenvorderseite hinter der Rückseite verborgen ist, solange nicht
+   aufgedeckt wurde — nach dem Reveal übernimmt dieselbe grüne Rahmen-Optik wie .card.selected. */
+.flipcard-treasure-slot { position: relative; cursor: pointer; }
+.flipcard-treasure-slot.selected .flipcard__face--front {
+  border-color: var(--select);
+  box-shadow: 0 0 0 2px var(--select) inset, 0 0 16px -2px var(--select);
+}
+.flipcard-treasure-slot.selected .flipcard__face--front::after {
+  content: '✓';
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--select);
+  color: #0e0d14;
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+/* Komponenten-Redesign (card-component-preview.html, released): Symbol unten rechts, in einem
+   festen Rahmen — die Rahmen-Position/-Größe bleibt für alle Kartentypen identisch.
+   Bug-Fix (iPad, 2026-09-25): Die Symbole waren bisher Unicode-Textzeichen (✦◆❖★▲◐●), die in
+   keiner unserer Web-Fonts existieren — der Browser ersetzte sie daher pro Zeichen durch eine
+   System-Symbolschrift, und macOS/iPadOS Safari nutzen dafür UNTERSCHIEDLICHE Symbolschriften mit
+   unterschiedlichen Glyphen-Metriken (andere Füllfläche/Baseline). Das machte Kristall auf dem
+   iPad viel zu groß und den Stern oben abgeschnitten, obwohl beide am Desktop korrekt aussahen.
+   Endgültiger Fix: Symbole sind jetzt reine CSS-Formen (.card__icon-bg-shape, clip-path/border-
+   radius) statt Text — dieselbe Bounding-Box für jeden Typ, komplett schriftunabhängig.
+   Bug-Fix 2 (2026-09-25): Die Box hing zuvor per negativem bottom/right über den Kartenrand hinaus
+   — die Karte hat aber overflow:hidden, wodurch die Form am Kartenrand abgeschnitten wurde. Bei
+   Formen mit Fläche in den äußeren Ecken (Achteck/Artefakt) blieb dadurch nur ein diamantartiger
+   Rest übrig, der optisch kaum noch vom Kristall zu unterscheiden war. Fix: Box liegt jetzt
+   komplett INNERHALB der Karte, mit festem Innenabstand (padding-bottom 40px, padding-right 10px)
+   statt Off-Card-Überhang — dadurch ist die Form nie beschnitten und bei allen Kartentypen
+   identisch groß/positioniert.
+   Alignment-Fix (released aus card-component-preview.html, 2026-09-25, AC „Karten-Symbole"):
+   padding-bottom war ein geratener Fixwert und lag nicht zuverlässig auf Höhe der Meta-Zeile
+   (dort stehen Typ-Name + Tags wie „Impuls").
+   Bug-Fix 3 (2026-09-25): Der erste Versuch dafür (grid-row: 1 / -1, bottom: 0) hat die Box zwar
+   an der letzten Grid-Zeile verankert, ABER wenn diese Zeile durch ein Tag höher wurde (z.B.
+   „Schwach"-Pille in .card__meta), wuchs die Grid-Zeile selbst mit — und damit verschob sich
+   bottom:0 relativ zur GESAMTEN Karte je nachdem, ob ein Tag vorhanden war oder nicht (Karten
+   ohne Tag hatten das Symbol dadurch höher als Karten mit Tag). Endgültiger Fix: Box ist jetzt
+   KEIN Grid-Item mehr, sondern rein relativ zur Karte selbst (.card hat position: relative)
+   absolut positioniert — bottom/right sind damit für jede Karte exakt derselbe Fixwert,
+   unabhängig von Grid-Inhalt/Zeilenhöhen. bottom 12px entspricht dem unteren Card-Padding (siehe
+   .card padding: 14px 16px 12px), damit die Box bündig mit der Innenkante abschließt. */
+.card__icon-bg {
+  position: absolute;
+  bottom: 12px;
+  right: 10px;
+  width: 96px;
+  height: 96px;
+  pointer-events: none;
+  z-index: 0;
+}
+/* Hintergrund-Symbole sind Inline-SVG-Linien-Icons (siehe CARD_TYPE_ICON_SVG in app.js): Typfarbe als
+   Strich, niedrige Deckkraft. Keine Schrift, kein clip-path -> iPad/Safari-sicher. */
+.card__icon-bg svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  stroke: var(--accent);
+  fill: none;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.16;
+}
+
+/* Feste Zeilenzuordnung statt impliziter Reihenfolge: Schätze haben keine .card__cost (kein Kind
+   in Zeile 1) — ohne explizites grid-row würde .card__name sonst in Zeile 1 rutschen. So bleiben
+   Symbol-, Titel- und Effekt-Position bei Schätzen exakt analog zu Zauber/Kristall/Relic. */
+.card__cost { grid-row: 1; }
+.card__name { grid-row: 2; }
+.card__effect { grid-row: 3; }
+.card__meta { grid-row: 4; }
+/* Titel: eigene volle Zeile unter den Kosten, wird nie abgekürzt/geklammert (kein
+   line-clamp/overflow mehr) — Titel in der typ-spezifischen Farbe (--accent). */
+.card__name {
+  font-family: var(--serif-display);
+  font-size: 1.08rem;
+  line-height: 1.24;
+  font-weight: 400;
+  color: var(--accent);
+  position: relative;
+  z-index: 1;
+}
+/* Kosten: eigene Zeile oben rechts, Icon+Zahl in derselben (weißen) Farbe wie das Æther-Icon,
+   unabhängig von der Titel-Typfarbe; bündig zueinander ausgerichtet. */
+.card__cost {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  font-family: var(--serif-display);
+  font-weight: 400;
+  font-size: 1.3rem;
+  color: var(--parchment);
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+}
+.card__cost img {
+  width: 1.05em;
+  height: 1.05em;
+  margin-right: -2px;
+  /* aether.svg ist hart schwarz gefüllt (kein currentColor) — per Filter auf Parchment-Ton geholt */
+  filter: brightness(0) saturate(100%) invert(1) sepia(8%) saturate(200%) hue-rotate(340deg);
+  opacity: 0.92;
+}
+.card__effect {
+  font-family: var(--serif-body);
+  font-size: 0.83rem;
+  color: var(--parchment-dim);
+  line-height: 1.42;
+  position: relative;
+  z-index: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+/* Punkt 28: Schatz-Effekttexte aus dem Original-Randomizer enthalten eigenes Mini-Markup
+   (Æther-Kennzeichnung, "ODER"-Trenner zwischen zwei Optionen, Fettung für Auslöser-Phrasen). */
+.card__effect b { color: var(--parchment); font-weight: 600; }
+.card__effect .aether { color: inherit; font-weight: inherit; }
+.card__effect .or {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin: 3px 0;
+}
+.card__meta {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  /* released aus card-component-preview.html: Meta-Zeile in der Typfarbe statt neutralem Grau */
+  color: var(--accent);
+  position: relative;
+  z-index: 1;
+  /* Kartentags (Punkt 39): .card__meta kann mehrere .card__tag-Pillen enthalten (z.B. Impuls +
+     Stark) — als Flex-Zeile mit Umbruch, damit sie bei mehreren Tags nicht abgeschnitten werden. */
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+/* Kartentags (released aus card-component-preview.html, Punkt 39): das "keywords"-Feld aus dem
+   Original-Randomizer (github.com/on3iro/aeons-end-randomizer) — "weak"/"strong" als Legacy-
+   Kampagnen-Auf-/Abwertungsstufe einer Karte bekommen die bereits etablierten Tier-Farben
+   (--tier-d/--tier-s), damit die Wertung auf denselben Blick wie das Magier-Tier-Rating lesbar
+   ist; alle anderen (reinen Mechanik-)Tags bleiben neutral (--line/--parchment-dim), da sie keine
+   Wertung transportieren. */
+.card__tag {
+  font-family: var(--sans);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  color: var(--parchment-dim);
+  background: rgba(255,255,255,0.04);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.card__tag--weak { border-color: var(--tier-d); color: var(--tier-d); background: rgba(181,69,61,0.1); }
+.card__tag--strong { border-color: var(--tier-s); color: var(--tier-s); background: rgba(255,213,79,0.1); }
+/* Absolut positioniert (statt eigener Grid-Zeile), damit sie die feste Kartenhöhe nicht sprengt.
+   Oben links auf Höhe der Kosten (card__cost, grid-row 1) platziert und linksbündig mit dem Titel
+   ausgerichtet — teilt sich die Zeile optisch mit dem Kosten-Icon oben rechts. */
+.card__sublabel {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--breach);
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  z-index: 2;
+  background: rgba(0,0,0,0.55);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Karten-Version der Auswahlkacheln, kompakt (Nemesis-Vorbereitung, Punkt 6) — ebenfalls feste
+   Größe, nur kleiner dimensioniert. */
+.card--compact {
+  padding: 10px 14px;
+  width: 190px;
+  height: 220px;
+  flex: 0 0 190px;
+  gap: 2px;
+  cursor: default;
+}
+.card--compact:hover { transform: none; }
+/* .card--compact ist kleiner als die volle Karte (190×220 statt 240×300) — Symbol-Box
+   proportional verkleinert (Faktor ~0.73), bleibt aber komplett innerhalb der Karte. .card--compact
+   hat ein kleineres Padding (10px statt 12px unten) als die volle .card, daher eigener bottom-Wert
+   — analog zum rein Karten-relativen (nicht Grid-basierten) .card__icon-bg, siehe dort. */
+.card--compact .card__icon-bg { width: 70px; height: 70px; bottom: 10px; right: 7px; }
+.card--compact .card__name { font-size: 0.92rem; }
+
+/* Nutzer-Wunsch: Zauber/Kristall/Relic UND Schätze etwas kürzer als die volle .card-Höhe (Magier
+   bleibt unverändert bei --card-h). marketplaceCardChipHtml() rendert für Zauber/Kristall/Relic
+   nur bei vorhandenen Kartentags (Punkt 39, c.keywords) eine .card__meta-Zeile — bei den übrigen
+   ~135 Karten ohne Keyword bleibt sie weiterhin komplett weg. treasureCardHtml() rendert für
+   Schätze NIE eine .card__cost-Zeile (siehe app.js). .card--slim (Zauber/Kristall/Relic) und
+   .card--slim-treasure (Schätze) definieren nur 3 explizite Grid-Zeilen (Kosten/Titel/Effekt bzw.
+   Titel/Effekt/Meta) und knapsen zusätzlich etwas enger bemessenes Padding + Effekttext-line-height
+   ab — auf identische --card-h, damit Schatz- und Marktplatzkarten nie unterschiedlich groß
+   wirken (Bug-Fix: die Kaserne nutzte für Schätze vorher fälschlich .card--compact, die eigentlich
+   für die Nemesis-Vorbereitung gedacht ist). Bei den 44 Marktplatzkarten mit Tags entsteht dadurch
+   eine implizite 4. Grid-Zeile (grid-auto-rows: auto, Default) für .card__meta, die sich den
+   Effektbereich (Zeile 3, 1fr) automatisch mit den paar Pixeln der Tag-Pille teilt — geprüft
+   gegen die jeweils längsten Effekttexte in data.js (Zauber "Verbindung zum Nichts" ~10 Zeilen,
+   Schatz "Brunnen der Verzweiflung" ~11 Zeilen — beide passen weiterhin ohne Scrollen; card__effect
+   hat ohnehin einen eigenen Scrollbereich als Fallback). */
+.card--slim,
+.card--slim-treasure {
+  --card-h: 280px;
+  padding: 11px 16px 9px;
+}
+.card--slim .card__effect,
+.card--slim-treasure .card__effect { line-height: 1.36; }
+.card--slim { grid-template-rows: auto auto 1fr; } /* Kosten, Titel, Effekt (+ ggf. implizit Meta/Tags) */
+/* Schätze: kein card__cost, dafür card__meta — umgekehrte Zeilenzuordnung als beim Standard-.card
+   (dort: Kosten=1, Titel=2, Effekt=3, Meta=4). */
+.card--slim-treasure { grid-template-rows: auto 1fr auto; } /* Titel, Effekt, Meta */
+.card--slim-treasure .card__name { grid-row: 1; }
+.card--slim-treasure .card__effect { grid-row: 2; }
+.card--slim-treasure .card__meta { grid-row: 3; }
+/* Beute-Reveal (Punkt 27): --card-h ist eine vererbte Custom Property — .flipcard und dessen
+   .flipcard__face-Kinder lesen sie über var(--card-h). Die Reduktion muss daher am äußeren
+   .flipcard-Wrapper sitzen (nicht nur an der Vorderseite), sonst hätten Rück- und Vorderseite
+   während der Flip-Animation unterschiedliche Höhen. */
+.flipcard--slim,
+.flipcard--slim-treasure { --card-h: 280px; }
+
+/* Expeditionsübersicht: Nemesis-Kacheln als 4 gleichartige, gestapelte Karten (Punkt 22) */
+#nemesisTiles {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Siegesseite: dieselbe gestapelte Darstellung wie in der Expeditionsübersicht (#nemesisTiles),
+   statt .chipgrid's zeilenweisem Wrap-Verhalten (führte zu ungleich breiten 2er-Reihen). */
+#victoryNemesisTiles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Siegesseite: Party-Recap als reine Info-Chips (nicht klickbar/auswählbar wie .chip in der
+   Charakterauswahl) — daher eigener Modifier statt .chip.selected/.disabled zu missbrauchen. */
+.chip--static { cursor: default; }
+.chip--static:hover { border-color: var(--line); }
+
+/* Siegesseite kompakt halten, damit sie möglichst ohne Scrollen passt: die Kacheln/Panels tragen
+   hier — anders als in der Expeditionsübersicht (Reveal/Verbessert-Block etc.) — nur eine kurze,
+   nicht-interaktive Zusammenfassung, brauchen also deutlich weniger Luft. Bewusst ID/Screen-
+   gescopt, damit .nemesis-tile/.panel/.chip auf den übrigen Screens unverändert bleiben. */
+#screen-victory .victory-hero {
+  padding: 22px 32px;
+  margin-bottom: 16px;
+}
+#screen-victory .victory-hero__kicker { margin-bottom: 6px; }
+#screen-victory .victory-hero__title { font-size: 2rem; margin-bottom: 6px; }
+#screen-victory .panel {
+  padding: 14px 20px;
+  margin-bottom: 12px;
+}
+#screen-victory .panel__title { font-size: 1.15rem; margin-bottom: 8px; }
+
+#victoryPartyChips { gap: 8px; }
+#victoryPartyChips .chip { padding: 6px 12px; }
+
+#victoryNemesisTiles .nemesis-tile {
+  min-height: 0;
+  padding: 8px 16px;
+}
+#victoryNemesisTiles .nemesis-tile__header { gap: 12px; }
+#victoryNemesisTiles .nemesis-tile__num { width: 28px; height: 28px; font-size: 0.88rem; }
+#victoryNemesisTiles .nemesis-tile__name { font-size: 1.02rem; }
+#victoryNemesisTiles .nemesis-tile__status { font-size: 0.76rem; }
+#victoryNemesisTiles .nemesis-tile__tries { margin-top: 0; }
+
+/* Nemesis-Kacheln in der Expeditionsübersicht: Kopfzeile (Nummer-Badge · Name · Status)
+   + darunter optional der volle Verbessert-Block. Rechteckig, einheitliche Breite. */
+.nemesis-tile {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 22px;
+  background: rgba(255,255,255,0.02);
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, background 0.15s;
+  /* Punkt 25: alle Kacheln (unrevealed/revealed/defeated) sollen unabhängig vom tatsächlichen
+     Inhalt (Header allein vs. Header + Verbessert-Block) dieselbe Mindestgröße haben. */
+  min-height: 118px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.nemesis-tile:has(.nemesis-tile__improved) { justify-content: flex-start; }
+.nemesis-tile__header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.nemesis-tile__num {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  color: var(--parchment-dim);
+  background: rgba(255,255,255,0.03);
+}
+.nemesis-tile__main { flex: 1 1 auto; min-width: 0; }
+.nemesis-tile__wave { color: var(--breach); font-family: var(--sans); font-size: 0.82rem; font-weight: 600; }
+.nemesis-tile__divider { border-top: 1px solid var(--line); margin: 10px 0 8px; }
+.nemesis-tile__level-heading { font-family: var(--sans); font-size: 0.78rem; color: var(--breach); margin: 6px 0 4px; }
+.nemesis-tile__level-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 4px; }
+.nemesis-tile__level-chip {
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+.nemesis-tile__name {
+  font-family: var(--serif-display);
+  font-size: 1.25rem;
+  margin: 0;
+}
+.nemesis-tile__status {
+  flex: 0 0 auto;
+  text-align: right;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--parchment-dim);
+}
+.nemesis-tile__tries {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--ember);
+  margin-top: 2px;
+}
+.nemesis-tile__duration {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--parchment-dim);
+  margin-top: 2px;
+}
+/* Punkt 25: die drei Status sollen sich klar UND unterschiedlich einfärben, statt nur über
+   Deckkraft/Umrissfarbe zu variieren — unrevealed = drohendes unbekanntes Übel (dunkel, vernebelt,
+   gestrichelt), revealed = akute Bedrohung (rot), defeated = überwunden (grün). */
+.nemesis-tile--locked {
+  background: repeating-linear-gradient(135deg, rgba(0,0,0,0.22) 0 12px, rgba(0,0,0,0.32) 12px 24px);
+  border: 1px dashed rgba(185, 178, 160, 0.28);
+  box-shadow: inset 0 0 24px rgba(0,0,0,0.35);
+}
+.nemesis-tile--locked .nemesis-tile__num { border-style: dashed; border-color: rgba(185, 178, 160, 0.28); color: var(--parchment-dim); }
+.nemesis-tile--locked .nemesis-tile__name--hidden { font-style: italic; color: var(--parchment-dim); }
+.nemesis-tile--locked .nemesis-tile__status { color: var(--parchment-dim); font-style: italic; }
+
+.nemesis-tile--defeated { border-color: var(--verdant); background: var(--verdant-dim); }
+.nemesis-tile--defeated .nemesis-tile__num { border-color: var(--verdant); color: var(--verdant); background: rgba(76,175,109,0.14); }
+.nemesis-tile--defeated .nemesis-tile__status { color: var(--verdant); }
+.nemesis-tile__status--defeated::before { content: "✓ "; }
+
+.nemesis-tile--revealed {
+  cursor: pointer;
+  border-color: var(--ember);
+  background: rgba(193,68,59,0.08);
+  box-shadow: 0 0 0 1px var(--ember) inset;
+}
+.nemesis-tile--revealed .nemesis-tile__num { border-color: var(--ember); color: var(--ember); background: rgba(193,68,59,0.14); }
+.nemesis-tile--revealed .nemesis-tile__status { color: var(--ember); }
+.nemesis-tile--revealed:hover { transform: translateX(4px); box-shadow: 0 0 0 1px var(--ember) inset, 0 4px 16px -6px var(--ember); }
+.nemesis-tile__name--hidden { font-family: var(--serif-display); font-size: 1rem; color: var(--parchment-dim); margin: 0; }
+
+/* "Verbessert:"-Block je enthüllter (revealed/defeated) Nemesis-Kachel: aktive Verbesserten-Karten
+   je Level + V+A-Zusammenfassung je Level, siehe AUFGABE B / getImprovedCardsForFight().
+   Punkt 22: keine gestrichelte Rahmenlinie mehr — der einzige Trenner ist .nemesis-tile__divider. */
+.nemesis-tile__improved {
+  margin-top: 10px;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--parchment-dim);
+}
+.nemesis-tile__improved-title { color: var(--breach); font-weight: 600; margin-bottom: 2px; }
+.nemesis-tile__improved-gap { height: 6px; }
+
+/* Nemesis-Vorbereitung (3c) — spoilerfrei: nur Kampfnummer + verbesserte Karten je Stufe */
+.nemesis-prep-row {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.nemesis-prep-row:last-child { border-bottom: none; }
+.nemesis-prep-row__head {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.nemesis-prep-row__num { font-family: var(--sans); font-size: 0.82rem; color: var(--breach); flex: 0 0 70px; }
+.nemesis-prep-row__hint { font-family: var(--serif-body); font-size: 0.85rem; color: var(--parchment-dim); font-style: italic; }
+.nemesis-prep-row__levels {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 86px;
+  font-family: var(--serif-body);
+  font-size: 0.95rem;
+  color: var(--parchment);
+}
+.nemesis-prep-row__levels li { padding: 3px 0; }
+.nemesis-prep-row__levels strong { color: var(--breach); font-family: var(--sans); font-size: 0.85rem; margin-right: 6px; }
+
+/* Schatzvergabe (Sieg 1/2/3): Charakter -> Schatz-Zuordnung statt Kandidaten-Auswahl */
+.treasure-assignment {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: default;
+}
+.treasure-assignment__mage { font-family: var(--serif-display); font-size: 1.05rem; min-width: 110px; }
+.treasure-assignment__arrow { color: var(--breach); }
+.treasure-assignment__treasure { font-family: var(--sans); font-size: 0.95rem; }
+
+/* Vor-dem-Kampf-Infobox */
+.before-fight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+}
+.before-fight-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.before-fight-grid > div span {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--parchment-dim);
+}
+
+/* Marktplatz-Setup (Optionen): vordefinierte Setups aus dem Original-Randomizer */
+.setup-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.setup-row:last-child { border-bottom: none; }
+.setup-row__checkbox {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  accent-color: var(--aetherium);
+  cursor: pointer;
+}
+.setup-row__body { flex: 1; min-width: 0; }
+.setup-row__name {
+  font-family: var(--serif-display);
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: var(--parchment);
+}
+.setup-row--inactive .setup-row__name { color: var(--parchment-dim); }
+.setup-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.setup-tile {
+  min-width: 44px;
+  padding: 6px 8px;
+  border-radius: 3px;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  text-align: center;
+  border: 1px solid transparent;
+}
+.setup-row--inactive .setup-tile { opacity: 0.4; }
+/* Farben 1:1 nach Original-Theme (src/mainTheme.ts, colors.cards), dunkel-theme-taugliche
+   Abwandlung: Kristall (Gem) = Violett, Relic = Blau, Zauber (Spell) = Beige/Gold */
+.setup-tile--kristall { background: var(--color-kristall-dim); border-color: var(--color-kristall); color: var(--color-kristall); }
+.setup-tile--relic   { background: var(--color-relic-dim); border-color: var(--color-relic); color: var(--color-relic); }
+.setup-tile--zauber   { background: var(--color-zauber-dim); border-color: var(--color-zauber); color: var(--color-zauber); }
+.setup-legend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  color: var(--parchment-dim);
+}
+.setup-legend__dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.setup-legend__dot--kristall { background: var(--color-kristall); }
+.setup-legend__dot--relic { background: var(--color-relic); }
+.setup-legend__dot--zauber { background: var(--color-zauber); }
+
+/* ===================== Siegesseite ===================== */
+/* Punkt 45: eigener, bewusst "feiernder" Hero-Stil (Gold/Grün) statt des neutralen .hero
+   (Aetherium/Breach) — nur hier ist die gesamte Expedition tatsächlich abgeschlossen. */
+.victory-hero {
+  position: relative;
+  margin-bottom: 40px;
+  padding: 52px 32px;
+  border-radius: 6px;
+  text-align: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 213, 79, 0.35);
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(255, 213, 79, 0.16), transparent 60%),
+    linear-gradient(180deg, var(--verdant-dim), var(--deep) 72%);
+}
+.victory-hero::before {
+  /* rein dekorativer, pulsierender Glanz — kein Inhalt, daher pointer-events: none */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255, 213, 79, 0.10), transparent 40%),
+    radial-gradient(circle at 80% 20%, rgba(76, 175, 109, 0.16), transparent 45%),
+    radial-gradient(circle at 60% 85%, rgba(255, 213, 79, 0.08), transparent 40%);
+  animation: victory-glow 6s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes victory-glow {
+  0% { opacity: 0.55; }
+  100% { opacity: 1; }
+}
+.victory-hero__kicker {
+  position: relative;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  color: var(--tier-s);
+  margin: 0 0 14px;
+}
+.victory-hero__title {
+  position: relative;
+  font-size: 3rem;
+  line-height: 1.1;
+  margin-bottom: 18px;
+  background: linear-gradient(90deg, var(--tier-s), #fff6da, var(--tier-s));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: var(--tier-s);
+}
+@supports (-webkit-background-clip: text) or (background-clip: text) {
+  .victory-hero__title { color: transparent; }
+}
+.victory-hero__score {
+  position: relative;
+  font-family: var(--serif-display);
+  font-size: 1.4rem;
+  color: var(--parchment);
+  margin: 0;
+}
+.victory-hero__duration {
+  position: relative;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  color: var(--parchment-dim);
+  margin: 4px 0 0;
+}
+
+@media (max-width: 720px) {
+  .story-layout { flex-direction: column; }
+  .story-rail { position: static; border-right: none; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+  .hero__title { font-size: 2.2rem; }
+  .victory-hero__title { font-size: 2.1rem; }
+  .game-over-hero__title { font-size: 2.1rem; }
+  .game-over-hero__icon { width: 140px; height: 140px; }
+  .sigilbar__steps { display: none; }
+}
+
+/* ===================== Game-Over-Screen (finale Niederlage) ===================== */
+/* Gegenstück zu .victory-hero: statt Gold/Grün ein düsteres, rotes Schema — die Expedition
+   ist hier endgültig gescheitert, kein Feiern, sondern Verfall. */
+.game-over-hero {
+  position: relative;
+  margin-bottom: 40px;
+  padding: 64px 32px;
+  border-radius: 6px;
+  text-align: center;
+  overflow: hidden;
+  border: 1px solid rgba(193, 68, 59, 0.4);
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(193, 68, 59, 0.22), transparent 60%),
+    linear-gradient(180deg, #2a1414, var(--void) 75%);
+}
+.game-over-hero__icon {
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 24px;
+  display: block;
+  /* nemesis.svg ist hart rot gefüllt (kein currentColor) — hier bewusst NICHT invertiert
+     (anders als .turn-card__icon), da Rot exakt die gewünschte Wirkung ist. Nur Schattenwurf
+     hinzugefügt, damit sich das Icon vom dunklen Hintergrund abhebt. */
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.75));
+}
+.game-over-hero__title {
+  position: relative;
+  font-size: 3rem;
+  line-height: 1.1;
+  margin-bottom: 18px;
+  color: var(--ember);
+  text-shadow: 0 2px 18px rgba(193, 68, 59, 0.6);
+}
+.game-over-hero__text {
+  position: relative;
+  font-family: var(--serif-display);
+  font-size: 1.15rem;
+  color: var(--parchment-dim);
+  max-width: 560px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+/* Konfetti-Effekt bei Expeditionsabschluss: einzelne Partikel werden per JS (launchConfetti() in
+   app.js) mit zufälliger Position/Farbe/Dauer erzeugt und nach dem Fall wieder entfernt. Fixed statt
+   absolute, weil #victoryConfetti außerhalb der .screen-Sections liegt (Geschwister von <main>). */
+.confetti {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 50;
+}
+.confetti__piece {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 14px;
+  opacity: 0.9;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.35, 0, 0.65, 1);
+  animation-fill-mode: forwards;
+}
+@keyframes confetti-fall {
+  to { transform: translateY(112vh) rotate(600deg); opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading__glyph { animation: none; }
+  .victory-hero::before { animation: none; }
+  .confetti { display: none; }
+  * { transition: none !important; }
+}
+
+/* ================================================================================================
+   Reihenfolge-Randomizer (Kampf-Detail, #tordPanel) — gemergt aus turn-order-randomizer-prototype.html.
+   Alle Klassennamen der Randomizer-UI sind mit "tord-" (Turn ORDer) präfixiert, um Kollisionen mit
+   den übrigen .styles.css-Klassen zu vermeiden.
+   ================================================================================================ */
+
+/* ---- Statuszeile (Deck-/Ablage-Zähler, Rundeninfo) ---- */
+.tord-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--parchment-dim);
+  margin-bottom: 18px;
+}
+.tord-status strong { color: var(--parchment); font-weight: 600; }
+
+/* ---- Bühne: aktuelle Karte + Infotext + Aktionen ---- */
+.tord-stage {
+  display: flex;
+  gap: 28px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.tord-current-info { flex: 1; min-width: 240px; }
+.tord-current-label {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--breach);
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tord-current-turntext {
+  font-family: var(--serif-display);
+  font-size: 1.6rem;
+  margin: 0 0 10px;
+}
+.tord-current-hint {
+  font-family: var(--serif-body);
+  color: var(--parchment-dim);
+  font-size: 0.95rem;
+  max-width: 46ch;
+  line-height: 1.5;
+  margin: 0;
+}
+/* ---- Kartenkomponente (großes Oval-Motiv, in Anlehnung an die physischen Reihenfolgekarten) ---- */
+.turn-card {
+  --tc-color: var(--parchment-dim);
+  flex: 0 0 auto;
+  width: var(--tc-w, 150px);
+  height: var(--tc-h, 210px);
+  border-radius: 10px;
+  background: linear-gradient(160deg, #2a2740, #171626 70%);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 26px -12px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.turn-card__oval {
+  width: 78%;
+  height: 62%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--tc-color) 55%, transparent), transparent 72%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc-color) 70%, transparent), 0 0 22px -2px color-mix(in srgb, var(--tc-color) 60%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.turn-card__label {
+  font-family: var(--serif-display);
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  text-align: center;
+}
+.turn-card__icon {
+  width: 85%;
+  height: 85%;
+  object-fit: contain;
+  /* nemesis.svg ist hart rot gefüllt (kein currentColor) — auf Weiß geholt, analog zum
+     bisherigen Textlabel (color:#fff), inkl. vergleichbarem Schlagschatten. */
+  filter: brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+}
+.turn-card--lg { --tc-w: 176px; --tc-h: 246px; }
+.turn-card--lg .turn-card__label { font-size: 5.4rem; }
+.turn-card--md { --tc-w: 108px; --tc-h: 150px; }
+.turn-card--md .turn-card__label { font-size: 2.6rem; }
+.turn-card--sm { --tc-w: 66px; --tc-h: 92px; }
+.turn-card--sm .turn-card__label { font-size: 1.6rem; }
+
+/* Geteiltes Label für "1/2" bzw. "3/4": zwei Ziffern übereinander statt Schrägstrich,
+   getrennt durch eine dünne weiße Trennlinie (Nutzerwunsch, 2026-09-24, Linie nachträglich
+   verschlankt). Die Schriftgröße sitzt am Wrapper, damit Ziffern und Trennlinie über
+   em-Einheiten mitskalieren. */
+.turn-card__label--split {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+.turn-card__label--split .turn-card__label-half { line-height: 1; }
+.turn-card__label--split .turn-card__label-divider {
+  width: 1.3em;
+  height: 0.04em;
+  margin: 0.1em 0;
+  background: #fff;
+  border-radius: 0.02em;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.turn-card--lg .turn-card__label--split { font-size: 3.7rem; }
+.turn-card--md .turn-card__label--split { font-size: 1.8rem; }
+.turn-card--sm .turn-card__label--split { font-size: 1.15rem; }
+
+.turn-card--t1     { --tc-color: var(--aetherium); }
+.turn-card--t2     { --tc-color: var(--breach); }
+.turn-card--t3     { --tc-color: var(--color-zauber); }
+.turn-card--t4     { --tc-color: var(--verdant); }
+.turn-card--t12    { --tc-color: var(--color-plan); }
+.turn-card--t34    { --tc-color: var(--color-kristall); }
+.turn-card--wild   { --tc-color: var(--parchment); }
+.turn-card--nemesis   { --tc-color: var(--ember); }
+.turn-card--malstrom  { --tc-color: var(--ember); }
+.turn-card--malstrom .turn-card__oval {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc-color) 70%, transparent),
+              0 0 0 5px color-mix(in srgb, var(--tier-s) 55%, transparent),
+              0 0 26px -2px color-mix(in srgb, var(--tc-color) 70%, transparent);
+  animation: tord-malstrom-pulse 2.2s ease-in-out infinite;
+}
+@keyframes tord-malstrom-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.18); }
+}
+.turn-card--facedown {
+  background: linear-gradient(160deg, #23213a, #14131f 70%);
+}
+.turn-card--facedown .turn-card__oval {
+  background: rgba(255,255,255,0.03);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.turn-card--facedown .turn-card__label { color: var(--parchment-dim); font-size: 1.1rem; }
+
+.turn-card--empty {
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+}
+.turn-card--empty .turn-card__oval { display: none; }
+.turn-card--empty::after {
+  content: '—';
+  color: var(--parchment-dim);
+  font-size: 1.4rem;
+}
+
+/* ---- Aktionsreihe (Zug beenden, Vorschau, Deck aufdecken) ---- */
+.tord-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+.tord-kbd {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: rgba(255,255,255,0.04);
+  color: var(--parchment-dim);
+  margin-left: 6px;
+}
+
+/* ---- Peek-Box ---- */
+.tord-peek {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.02);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+/* Klickbare Variante: Vorschau-Fenster fungiert als Button, der die nächste Karte ans Ende des
+   Decks sortiert (Nutzerwunsch 2026-09-25) — Font/Farbe/Ausrichtung bleiben wie im nicht-klickbaren
+   Zustand, nur Cursor/Hover signalisieren Interaktivität. */
+.tord-peek--action {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.tord-peek--action:hover,
+.tord-peek--action:focus-visible {
+  background: rgba(255,255,255,0.05);
+  border-color: var(--parchment-dim);
+}
+.tord-peek-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tord-peek-text {
+  font-family: var(--serif-body);
+  color: var(--parchment-dim);
+  font-size: 0.92rem;
+}
+.tord-peek-text strong { color: var(--parchment); }
+.tord-peek-text--main {
+  font-size: 1.15rem;
+}
+.tord-peek-text--hint {
+  font-size: 0.92rem;
+}
+
+/* ---- Aufgedecktes Deck (reorderbar) ---- */
+.tord-reveal {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.tord-reveal-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+/* Overlay-Karten (Tablet-Deck-Overlay) deutlich größer als die Basisgröße "md" (Nutzerwunsch,
+   2026-09-24; nochmals vergrößert + mit Ablage-Overlay vereinheitlicht, 2026-09-25). Maße kommen aus
+   --tord-overlay-card-w/-h (siehe :root) — einzige Quelle der Wahrheit für alle drei Overlay-
+   Kartenreihen (Reihenfolgedeck, Ablagestapel, Zurückmischen-Auswahl), die sich dieselbe Kartengröße
+   teilen (Refactoring 2026-10-06, siehe [[aeons_end_tablet_kampf_optimierung]] Punkt 3) — nur im
+   Tablet-Overlay, nicht in der Klassik-Ansicht (dort bleibt tord-reveal-row inline im Panel
+   eingebettet, keine eigene Größenanhebung nötig). */
+.tablet-overlay .tord-reveal-row { gap: 18px; }
+.tablet-overlay .tord-reveal-row .turn-card { --tc-w: var(--tord-overlay-card-w); --tc-h: var(--tord-overlay-card-h); }
+.tablet-overlay .tord-reveal-row .turn-card__label { font-size: 4.5rem; }
+.tablet-overlay .tord-reveal-row .turn-card__label--split { font-size: 3.3rem; }
+/* Pfeil-Buttons (◂▸) zum Umsortieren proportional mit den größeren Karten mitvergrößert. */
+.tablet-overlay .tord-reveal-item__nudge { gap: 10px; }
+.tablet-overlay .tord-nudge-btn {
+  font-size: 1.7rem;
+  padding: 13px 22px;
+  min-width: 60px;
+  min-height: 56px;
+}
+.tord-reveal-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: grab;
+  touch-action: none;
+}
+.tord-reveal-item.is-dragging { opacity: 0.85; cursor: grabbing; box-shadow: 0 10px 24px -6px rgba(0,0,0,0.55); }
+.tord-reveal-item__pos {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--parchment-dim);
+}
+.tord-reveal-item__nudge {
+  display: flex;
+  gap: 8px;
+}
+.tord-nudge-btn {
+  font-family: var(--sans);
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 10px 18px;
+  min-width: 48px;
+  min-height: 44px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--parchment-dim);
+  cursor: pointer;
+}
+.tord-nudge-btn:hover:not(:disabled) { border-color: var(--aetherium-dim); color: var(--parchment); }
+.tord-nudge-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ---- Ablagestapel / Verlauf ---- */
+.tord-history {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.tord-history-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+/* Overlay-Karten (Tablet-Ablage-Overlay) — Nutzerwunsch 2026-09-25: exakt dieselbe Kartengröße wie
+   im Reihenfolgedeck-Overlay (.tord-reveal-row oben), damit beide Overlays gleich groß wirken. Maße
+   kommen aus --tord-overlay-card-w/-h (siehe :root). Gilt auch für die Kartenvorschau bei
+   "Spielerkarte zurückmischen" / "Erzfeindkarte zurückmischen" (.tord-special-picker-row, siehe
+   unten). */
+.tablet-overlay .tord-history-row { gap: 18px; }
+.tablet-overlay .tord-history-row .turn-card { --tc-w: var(--tord-overlay-card-w); --tc-h: var(--tord-overlay-card-h); }
+.tablet-overlay .tord-history-row .turn-card__label { font-size: 4.5rem; }
+.tablet-overlay .tord-history-row .turn-card__label--split { font-size: 3.3rem; }
+.tord-history-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.tord-history-item__idx {
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  color: var(--parchment-dim);
+}
+.tord-history-divider {
+  align-self: center;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--tier-s);
+  padding: 0 4px;
+  white-space: nowrap;
+}
+.tord-history-empty {
+  font-family: var(--serif-body);
+  color: var(--parchment-dim);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* ---- Sonderfunktionen (seltene Ausnahmefälle, bewusst unauffällig/eingeklappt) ---- */
+.tord-special {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+.tord-special-body {
+  margin-top: 12px;
+}
+.tord-special-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tord-special-actions .btn.is-active {
+  border-color: var(--aetherium-dim);
+  color: var(--parchment);
+  background: rgba(255,255,255,0.04);
+}
+.tord-special-picker-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+/* Nutzerwunsch 2026-09-25: Kartenvorschau bei "Spielerkarte/Erzfeindkarte zurückmischen" genau so
+   groß wie im Reihenfolgedeck-/Ablagestapel-Overlay (siehe .tord-reveal-row/.tord-history-row). Maße
+   kommen aus --tord-overlay-card-w/-h (siehe :root). */
+.tablet-overlay .tord-special-picker-row { gap: 18px; }
+.tablet-overlay .tord-special-picker-row .turn-card { --tc-w: var(--tord-overlay-card-w); --tc-h: var(--tord-overlay-card-h); }
+.tablet-overlay .tord-special-picker-row .turn-card__label { font-size: 4.5rem; }
+.tablet-overlay .tord-special-picker-row .turn-card__label--split { font-size: 3.3rem; }
+.tord-special-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--sans);
+}
+.tord-special-pick .turn-card { transition: transform 0.12s, box-shadow 0.12s; }
+.tord-special-pick:hover .turn-card {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 26px -12px rgba(0,0,0,0.65), inset 0 0 0 1px rgba(255,255,255,0.05);
+}
+.tord-special-pick__label {
+  font-size: 0.72rem;
+  color: var(--parchment-dim);
+}
+
+/* ---- Erweiterte-Regeln-Checkbox-Zeile (Options-Screen) ---- */
+.tord-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.tord-check-row:last-child { border-bottom: none; }
+.tord-check-row input[type="checkbox"] {
+  accent-color: var(--aetherium);
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.tord-check-row label { cursor: pointer; }
+.tord-check-row__title { font-family: var(--sans); font-size: 0.95rem; color: var(--parchment); display: block; }
+.tord-check-row__hint { font-family: var(--serif-body); font-size: 0.85rem; color: var(--parchment-dim); margin-top: 2px; }
+
+/* ================================================================================================
+   Tablet-Kampf-Screen (#screen-battle) — gemergt aus tablet-combat.html (Stand 2026-09-24).
+   Portrait/Smartphone (Basis, ungedreht): einfacher Spaltenstapel Feste -> Zentrum -> Erzfeind.
+   Landscape/Tablet (@media orientation:landscape unten): 3-Spalten-Grid, Feste/Erzfeind-Zahlen
+   und Kampf-Titel-Streifen jeweils um 90° gedreht (einander zugewandt), aktive Karte liegend.
+   ================================================================================================ */
+.tablet-orientation-hint {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: color-mix(in srgb, var(--ember) 18%, var(--void));
+  border-bottom: 1px solid var(--ember);
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  color: var(--parchment);
+  margin-bottom: 18px;
+}
+@media (orientation: portrait) {
+  .tablet-orientation-hint { display: flex; }
+}
+
+.tablet-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px;
+  min-height: calc(100vh - 64px);
+}
+.tablet-col { display: flex; flex-direction: column; min-height: 0; }
+.tablet-col--feste, .tablet-col--erzfeind { flex: none; }
+
+@media (orientation: landscape) {
+  .tablet-stage {
+    display: grid;
+    /* Spalten verbreitert, damit die vergrößerten HP-Counter (Buttons + Zahl) genug Raum haben
+       (Nutzerwunsch, 2026-09-24). */
+    grid-template-columns: minmax(260px, 320px) 1fr minmax(260px, 320px);
+    gap: 22px;
+    /* Seitliches Padding bewusst kleiner als das vertikale, damit die Feste-/Erzfeind-Spalten
+       näher an den Bildschirmrand rücken (Nutzerwunsch, 2026-09-26). Nur der Außenabstand
+       schrumpft — Spaltenbreiten (grid-template-columns) und Counter-Größen bleiben unverändert,
+       Zentrum-Spalte bekommt dadurch nicht mehr Breite. */
+    padding: 22px 8px;
+    height: calc(100vh - 64px);
+    min-height: 560px;
+    align-items: stretch;
+  }
+  .tablet-col--feste, .tablet-col--erzfeind { flex: 1; }
+}
+
+/* ---- HP-Zähler (Feste / Erzfeind) ---- */
+.hp-counter {
+  --hp-color: var(--breach);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 18px 14px;
+  border-radius: 28px;
+  border: 2px solid var(--hp-color);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--hp-color) 16%, var(--deep)), var(--void) 78%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--hp-color) 45%, transparent),
+    0 22px 44px -22px rgba(0,0,0,0.75),
+    inset 0 0 34px -10px color-mix(in srgb, var(--hp-color) 40%, transparent);
+}
+.hp-counter--erzfeind { --hp-color: var(--ember); }
+.hp-counter__btn {
+  width: min(92px, 16vh);
+  height: min(92px, 16vh);
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--hp-color) 65%, var(--parchment) 12%);
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--hp-color) 32%, var(--deep-2)), var(--void) 82%);
+  color: var(--parchment);
+  font-family: var(--serif-display);
+  font-size: 2.9rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.1s, filter 0.15s;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+.hp-counter__btn:hover:not(:disabled) { filter: brightness(1.22); }
+.hp-counter__btn:active:not(:disabled) { transform: scale(0.94); }
+.hp-counter__btn:disabled { opacity: 0.32; cursor: not-allowed; filter: none; }
+.hp-counter__value {
+  font-family: var(--serif-display);
+  font-size: min(4.4rem, 9vh);
+  font-weight: 700;
+  color: var(--parchment);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--hp-color) 48%, transparent), transparent 74%);
+  border-radius: 50%;
+  width: min(160px, 28vh);
+  height: min(160px, 28vh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--hp-color) 72%, transparent),
+    0 0 30px -4px color-mix(in srgb, var(--hp-color) 68%, transparent);
+  flex-shrink: 0;
+  transform-origin: center;
+}
+/* Erzfeind-/Feste-Zahlen-Kreis sind zusätzlich klickbar (spielen einen Sound ab, siehe
+   playNemesisRevealSfx()/playSfx('waiting') in app.js) — Cursor/Active-Feedback signalisieren
+   das. Rotation im Active-State jeweils passend zur Grundrotation des Kreises (siehe
+   .hp-counter--feste/--erzfeind .hp-counter__value oben: -90deg bzw. 90deg). */
+#hpErzfeindValue, #hpFesteValue {
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.1s, filter 0.15s;
+}
+#hpErzfeindValue:hover, #hpFesteValue:hover { filter: brightness(1.15); }
+#hpErzfeindValue:active, #hpFesteValue:active { transform: scale(0.96); }
+@media (orientation: landscape) {
+  #hpErzfeindValue:active { transform: rotate(90deg) scale(0.96); }
+  #hpFesteValue:active { transform: rotate(-90deg) scale(0.96); }
+}
+@media (orientation: landscape) {
+  .hp-counter { flex: 1; padding: 22px 8px; gap: 18px; }
+  .hp-counter--feste .hp-counter__value { transform: rotate(-90deg); }
+  .hp-counter--erzfeind .hp-counter__value { transform: rotate(90deg); }
+  /* Das "−"-Zeichen sieht liegend (als Trennstrich) besser aus als stehend — analog zur
+     bereits vorhandenen Rotation des Zahlenwerts oben. Nur im Landscape-Tablet-Layout, wo
+     die Counter am Bildschirmrand stehen; "+" bleibt unrotiert (Kreuz ist symmetrisch). */
+  #btnFesteMinus, #btnErzfeindMinus { transform: rotate(90deg); }
+  #btnFesteMinus:active:not(:disabled), #btnErzfeindMinus:active:not(:disabled) { transform: rotate(90deg) scale(0.94); }
+}
+
+/* ---- Zentrum: Reihenfolge-Bühne ---- */
+.tablet-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 3vh, 28px);
+  min-height: 0;
+  height: 100%;
+}
+.tablet-active-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  container-type: size;
+  container-name: tablet-active;
+}
+.tablet-active-card {
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+.tablet-active-card .turn-card {
+  width: min(94cqh, 620px);
+  height: auto;
+  max-height: min(94cqw, 600px);
+  aspect-ratio: 300 / 420;
+  transform: rotate(90deg);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.tablet-active-card:active .turn-card { transform: rotate(90deg) scale(0.97); }
+.turn-card--justdrawn { animation: tablet-card-flash 0.6s ease-out; }
+@keyframes tablet-card-flash {
+  0% { filter: brightness(2.1); box-shadow: 0 0 0 4px rgba(255,255,255,0.55), 0 0 46px -4px rgba(255,255,255,0.5); }
+  100% { filter: brightness(1); }
+}
+
+.tablet-deck-discard-row {
+  display: flex;
+  align-items: center;
+  gap: 56px;
+}
+.tablet-deck-discard-col { display: flex; flex-direction: column; align-items: center; }
+
+/* Deck als Kartenstapel mit minimalistischer digitaler Rückseite. */
+.tord-deckstack {
+  position: relative;
+  width: var(--tc-w, 150px);
+  height: var(--tc-h, 210px);
+  cursor: pointer;
+  touch-action: manipulation;
+  --tc-w: 150px; --tc-h: 210px;
+}
+.tord-deckstack__layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: linear-gradient(160deg, #23213a, #14131f 70%);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 26px -12px rgba(0,0,0,0.6);
+}
+/* Layer-Anzahl + Versatz (translate) werden inline per JS gesetzt (renderDeckStack(),
+   TORD_DECK_LAYER_STEP_PX) — die Anzahl der Layer entspricht der Anzahl noch verfügbarer
+   Karten im Deck. Nur der oberste ("--front") Layer zeigt das Rückseiten-Oval. */
+.tord-deckstack__layer--front {
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s;
+}
+.tord-deckstack:active .tord-deckstack__layer--front { transform: scale(0.97) !important; }
+.tord-deckback-oval {
+  width: 74%; height: 60%;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--parchment) 55%, transparent);
+  background: rgba(255,255,255,0.03);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px;
+}
+.tord-deckback-oval span {
+  font-family: var(--serif-display);
+  letter-spacing: 0.14em;
+  color: color-mix(in srgb, var(--parchment) 72%, transparent);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+.tord-deckstack__count {
+  position: absolute;
+  bottom: -10px;
+  right: -14px;
+  background: var(--deep-2);
+  border: 1px solid var(--line);
+  color: var(--parchment);
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  padding: 3px 9px;
+  border-radius: 999px;
+  z-index: 2;
+}
+
+/* Ablagestapel als Kartenstapel — analog .tord-deckstack, aber der oberste Layer zeigt
+   die zuletzt abgelegte Karte statt eines Rückseiten-Ovals. */
+.tord-discard-slot {
+  position: relative;
+  width: var(--tc-w, 150px);
+  height: var(--tc-h, 210px);
+  cursor: pointer;
+  touch-action: manipulation;
+  --tc-w: 150px; --tc-h: 210px;
+}
+.tord-discard-slot__layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: linear-gradient(160deg, #23213a, #14131f 70%);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 26px -12px rgba(0,0,0,0.6);
+}
+.tord-discard-slot__layer--front {
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s;
+  background: none; border: none; box-shadow: none;
+}
+.tord-discard-slot:active .tord-discard-slot__layer--front { transform: scale(0.97); }
+.tord-discard-slot .turn-card,
+.tord-deckstack .turn-card { --tc-w: 150px; --tc-h: 210px; }
+
+.tablet-center__utility { display: flex; gap: 14px; margin-top: 4px; }
+#tabletPeekSlot:not(:empty) { margin-top: -4px; }
+
+/* ---- Feste-/Erzfeind-Spalte: Counter + rotierter Titel-Streifen ---- */
+.tablet-col--feste, .tablet-col--erzfeind {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.tablet-fight-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+}
+.tablet-fight-title__nemesis, .tablet-fight-title__feste {
+  font-family: var(--serif-display);
+  font-size: 1.6rem;
+  line-height: 1.2;
+  color: var(--parchment);
+  text-align: center;
+}
+@media (orientation: landscape) {
+  .tablet-col--feste, .tablet-col--erzfeind {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center;
+    gap: 6px;
+  }
+  .tablet-fight-title {
+    flex: none;
+    width: 46px;
+    overflow: hidden;
+    padding: 0;
+  }
+  .tablet-fight-title__nemesis {
+    width: min(420px, 90vh);
+    white-space: nowrap;
+    transform: rotate(90deg);
+  }
+  .tablet-fight-title__feste {
+    width: min(420px, 90vh);
+    white-space: nowrap;
+    transform: rotate(-90deg);
+  }
+}
+
+/* ---- CTAs (Zurück / Niederlage / Sieg) — unten im Zentrum, unter Deck/Ablage ---- */
+.tablet-center__actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 6px;
+}
+.tablet-center__actions .btn {
+  min-height: 52px;
+  font-size: 0.94rem;
+  padding: 12px 18px;
+}
+
+/* ---- Overlays (Deck aufdecken / Ablagestapel + Sonderfunktionen) ---- */
+.tablet-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--void);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 60;
+  overflow-y: auto;
+}
+.tablet-overlay[hidden] { display: none; }
+.tablet-overlay__panel {
+  width: 100%;
+  max-width: min(1280px, 97vw);
+  max-height: 94vh;
+  overflow-y: auto;
+  margin: 0;
+}
+.tablet-overlay__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+.tablet-overlay__close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--deep-2);
+  color: var(--parchment);
+  font-size: 1.4rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.tablet-overlay__close:hover { filter: brightness(1.25); }
+.tablet-overlay__close:active { transform: scale(0.94); }
+
+body.tablet-scroll-lock { overflow: hidden; height: 100vh; }
+
+/* ============================================================
+   Errungenschaften / Badge-Komponente (aus archive/badge-component-preview.html)
+   Icons: inline SVG (siehe achievements.js) — bewusst keine Icon-Font/clip-path (iPad/Safari).
+   ============================================================ */
+.panel__count { font-family: var(--sans); font-size: 0.78rem; font-weight: 400; color: var(--parchment-dim); margin-left: 8px; }
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 18px; margin-top: 12px; }
+.badge-card {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;
+  padding: 20px 14px 18px; border-radius: 16px; border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  transition: transform 0.15s, border-color 0.15s;
+}
+.badge-card:hover { transform: translateY(-2px); border-color: rgba(232,225,207,0.22); }
+.badge-card__icon-wrap {
+  --badge-color: var(--parchment-dim);
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  border: 2px solid color-mix(in srgb, var(--badge-color) 55%, var(--line) 45%);
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--badge-color) 18%, var(--deep-2)), var(--void) 82%);
+  transition: filter 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.badge-card__icon-wrap svg {
+  width: 34px; height: 34px; stroke: var(--badge-color); fill: none;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; transition: stroke 0.2s;
+}
+.badge-card.is-locked .badge-card__icon-wrap { opacity: 0.55; filter: grayscale(0.5); }
+.badge-card.is-locked .badge-card__title { color: var(--parchment-dim); }
+.badge-card.is-complete .badge-card__icon-wrap {
+  --badge-color: var(--tier-s); opacity: 1; filter: none; border-color: var(--tier-s);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tier-s) 45%, transparent), 0 0 22px -4px color-mix(in srgb, var(--tier-s) 70%, transparent);
+}
+.badge-card.is-complete .badge-card__title { color: var(--parchment); }
+.badge-card__title { font-family: var(--serif-display); font-size: 0.95rem; font-weight: 600; line-height: 1.25; }
+.badge-card__condition { font-family: var(--serif-body); font-size: 0.8rem; color: var(--parchment-dim); line-height: 1.4; min-height: 2.6em; }
+.badge-fillbar { width: 100%; display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
+.badge-fillbar__track { width: 100%; height: 6px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.badge-fillbar__fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--aetherium-dim), var(--breach)); transition: width 0.25s; }
+.badge-card.is-complete .badge-fillbar__fill { background: var(--tier-s); }
+.badge-fillbar__label { font-family: var(--sans); font-size: 0.72rem; color: var(--parchment-dim); letter-spacing: 0.01em; }
+
+/* Completion-/Game-Over-Screen: in dieser Expedition neu erfüllte Meilensteine. Die Kachel
+   leuchtet beim Erscheinen EINMAL golden auf (Animation läuft nicht in Schleife). */
+.badge-grid--expedition { grid-template-columns: repeat(auto-fit, minmax(190px, 220px)); justify-content: center; }
+.badge-card.is-new {
+  border-color: var(--tier-s);
+  animation: badge-gold-glow 2.4s ease-out 0.4s 1 both;
+}
+.badge-card.is-new .badge-card__icon-wrap { animation: badge-gold-icon 2.4s ease-out 0.4s 1 both; }
+@keyframes badge-gold-glow {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--tier-s) 0%, transparent); }
+  35%  { box-shadow: 0 0 46px 8px color-mix(in srgb, var(--tier-s) 75%, transparent), inset 0 0 28px color-mix(in srgb, var(--tier-s) 28%, transparent); }
+  100% { box-shadow: 0 0 14px 0 color-mix(in srgb, var(--tier-s) 30%, transparent); }
+}
+@keyframes badge-gold-icon {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .badge-card.is-new, .badge-card.is-new .badge-card__icon-wrap { animation: none; box-shadow: 0 0 14px 0 color-mix(in srgb, var(--tier-s) 30%, transparent); }
+}
+
+/* ============================================================
+   Erzfeind-Ranking (Chronik)
+   ============================================================ */
+.nrank { display: flex; flex-direction: column; gap: 8px; }
+.nrank__row {
+  --lamp: var(--line);
+  display: grid; grid-template-columns: 32px minmax(140px, 1.3fr) minmax(160px, 2fr) 76px 84px;
+  align-items: center; gap: 16px; padding: 10px 16px;
+  border: 1px solid var(--line); border-left: 3px solid var(--lamp); border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+}
+.nrank__row--easy { --lamp: var(--verdant); }
+.nrank__row--mid { --lamp: var(--tier-c); }
+.nrank__row--hard { --lamp: var(--ember); }
+.nrank__row--none { opacity: 0.6; }
+.nrank__row--open .nrank__dot { box-shadow: none; }
+.nrank__pos { font-family: var(--serif-display); font-size: 1.05rem; color: var(--parchment-dim); text-align: center; }
+.nrank__name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nrank__title { font-family: var(--serif-display); font-size: 1rem; line-height: 1.2; }
+.nrank__sub { font-family: var(--sans); font-size: 0.72rem; color: var(--parchment-dim); }
+.nrank__bar { display: flex; flex-direction: column; gap: 4px; }
+.nrank__track { height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--ember) 55%, var(--void)); overflow: hidden; }
+.nrank__row--none .nrank__track { background: var(--line); }
+.nrank__win { height: 100%; background: var(--verdant); border-radius: 4px 0 0 4px; transition: width 0.25s; }
+.nrank__label { font-family: var(--sans); font-size: 0.74rem; color: var(--parchment-dim); }
+.nrank__time { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.nrank__time-val { font-family: var(--serif-display); font-size: 0.95rem; }
+.nrank__time-lbl { font-family: var(--sans); font-size: 0.66rem; color: var(--parchment-dim); letter-spacing: 0.04em; }
+.nrank__lamp { display: flex; align-items: center; gap: 8px; justify-content: flex-start; }
+.nrank__dot {
+  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; background: var(--lamp);
+  box-shadow: 0 0 10px -1px color-mix(in srgb, var(--lamp) 80%, transparent);
+}
+.nrank__row--none .nrank__dot { box-shadow: none; }
+.nrank__lamp-lbl { font-family: var(--sans); font-size: 0.78rem; color: var(--parchment); }
+@media (max-width: 720px) {
+  .nrank__row { grid-template-columns: 26px 1fr 80px; row-gap: 8px; }
+  .nrank__bar { grid-column: 1 / -1; order: 5; }
+  .nrank__time { align-items: flex-start; }
+}
+
+/* ============================================================
+   Bestleistungen / Highscores (Chronik)
+   ============================================================ */
+.hs { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.hs__group { display: flex; flex-direction: column; gap: 8px; }
+.hs__group-title { font-family: var(--serif-display); font-size: 1.05rem; color: var(--parchment); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.hs__row {
+  display: grid; grid-template-columns: 34px 78px 1fr; align-items: center; gap: 12px;
+  padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+}
+.hs__row--empty { opacity: 0.55; }
+.hs__medal {
+  --medal: var(--parchment-dim);
+  width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif-display); font-size: 0.95rem; color: var(--void); background: var(--medal);
+}
+.hs__row--empty .hs__medal { background: transparent; border: 1px solid var(--line); color: var(--parchment-dim); }
+.hs__medal--gold { --medal: var(--tier-s); box-shadow: 0 0 12px -3px var(--tier-s); }
+.hs__medal--silver { --medal: #c9ccd6; }
+.hs__medal--bronze { --medal: #c08a5a; }
+.hs__time { font-family: var(--serif-display); font-size: 1.1rem; }
+.hs__details { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-family: var(--sans); font-size: 0.76rem; line-height: 1.35; }
+.hs__line { display: flex; gap: 8px; }
+.hs__lbl { flex: 0 0 58px; color: var(--parchment-dim); }
+
+/* Party-Synergie-Hinweis (Charakterauswahl) — prominenter Hinweis-Kasten mit Abstand nach oben */
+.synergy-hint {
+  --hint: var(--aetherium);
+  margin-top: 32px;
+  padding: 14px 18px;
+  border: 1px solid color-mix(in srgb, var(--hint) 45%, var(--line));
+  border-left: 4px solid var(--hint);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--hint) 12%, transparent);
+}
+.synergy-hint[hidden] { display: none; }
+.synergy-hint--new { --hint: var(--breach); }
+.synergy-hint--good { --hint: var(--verdant); }
+.synergy-hint--mid { --hint: var(--tier-c); }
+.synergy-hint--bad { --hint: var(--ember); }
+.synergy-hint__title { font-family: var(--serif-display); font-size: 1.1rem; color: var(--parchment); margin-bottom: 4px; }
+.synergy-hint__text { font-family: var(--serif-body); font-size: 0.98rem; color: var(--parchment-dim); }
+
+/* Erzfeind-Ampel auf der Kachel (Übersicht), erst ab NEMESIS_LAMP_MIN_ATTEMPTS Versuchen */
+.nemesis-lamp { --lamp: var(--parchment-dim); display: flex; align-items: center; gap: 8px; margin-top: 6px; font-family: var(--sans); font-size: 0.78rem; }
+.nemesis-lamp--easy { --lamp: var(--verdant); }
+.nemesis-lamp--mid { --lamp: var(--tier-c); }
+.nemesis-lamp--hard { --lamp: var(--ember); }
+.nemesis-lamp__dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; background: var(--lamp); box-shadow: 0 0 9px -1px color-mix(in srgb, var(--lamp) 80%, transparent); }
+.nemesis-lamp__label { color: var(--parchment); font-weight: 600; }
+.nemesis-lamp__meta { color: var(--parchment-dim); }

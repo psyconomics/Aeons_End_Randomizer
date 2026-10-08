@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Reihenfolge-Randomizer — Prototyp (Kampf-Detail)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  /* ==========================================================================================
+     Reihenfolge-Randomizer — eigenständiger Test-Prototyp
+     --------------------------------------------------------------------------------------------
+     Zweck: separat testbar machen, bevor die Section in #screen-battle (index.html/app.js)
+     gemergt wird (siehe Nutzer-Vorgabe: "Damit wir diesen separat testen können, möchte ich,
+     dass du diesen vorerst als separate html erzeugst. Wenn alles passt, dann mergen wir ihn.").
+
+     Aufbau dieser Datei:
+       1. Test-Konfigurationspanel (NICHT Teil des Merges — im echten App entspricht das der
+          Spieleranzahl aus der Expeditions-Erstellung + den zwei Erweiterten-Regeln-Schaltern,
+          die im echten Options-Screen landen).
+       2. <!-- BEGIN: zu mergender Abschnitt --> ... <!-- END --> : exakt der Block, der 1:1 in
+          #screen-battle wandert (oberhalb der Zurück/Sieg/Niederlage-CTAs).
+       3. Mock-Actions-Zeile, rein zur Layout-Vorschau der finalen Reihenfolge im echten Screen.
+       4. Debug-Panel (ebenfalls NICHT Teil des Merges).
+
+     Alle Klassennamen der eigentlichen Randomizer-UI sind mit "tord-" (Turn ORDer) präfixiert,
+     um Kollisionen mit bestehenden .styles.css-Klassen zu vermeiden.
+     ========================================================================================== */
+
+  .tord-testpanel { border: 1px dashed var(--aetherium-dim); }
+  .tord-testpanel .panel__title { color: var(--breach); }
+
+  /* ---- Statuszeile (Deck-/Ablage-Zähler, Rundeninfo) ---- */
+  .tord-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    color: var(--parchment-dim);
+    margin-bottom: 18px;
+  }
+  .tord-status strong { color: var(--parchment); font-weight: 600; }
+
+  /* ---- Bühne: aktuelle Karte + Infotext + Aktionen ---- */
+  .tord-stage {
+    display: flex;
+    gap: 28px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .tord-current-info { flex: 1; min-width: 240px; }
+  .tord-current-label {
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    color: var(--breach);
+    margin: 0 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .tord-current-turntext {
+    font-family: var(--serif-display);
+    font-size: 1.6rem;
+    margin: 0 0 10px;
+  }
+  .tord-current-hint {
+    font-family: var(--serif-body);
+    color: var(--parchment-dim);
+    font-size: 0.95rem;
+    max-width: 46ch;
+    line-height: 1.5;
+    margin: 0;
+  }
+  /* ---- Kartenkomponente (großes Oval-Motiv, in Anlehnung an die physischen Reihenfolgekarten) ---- */
+  .turn-card {
+    --tc-color: var(--parchment-dim);
+    flex: 0 0 auto;
+    width: var(--tc-w, 150px);
+    height: var(--tc-h, 210px);
+    border-radius: 10px;
+    background: linear-gradient(160deg, #2a2740, #171626 70%);
+    border: 1px solid var(--line);
+    box-shadow: 0 10px 26px -12px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.03);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .turn-card__oval {
+    width: 78%;
+    height: 62%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--tc-color) 55%, transparent), transparent 72%);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc-color) 70%, transparent), 0 0 22px -2px color-mix(in srgb, var(--tc-color) 60%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .turn-card__label {
+    font-family: var(--serif-display);
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    text-align: center;
+  }
+  .turn-card--lg { --tc-w: 176px; --tc-h: 246px; }
+  .turn-card--lg .turn-card__label { font-size: 2.3rem; }
+  .turn-card--md { --tc-w: 108px; --tc-h: 150px; }
+  .turn-card--md .turn-card__label { font-size: 1.3rem; }
+  .turn-card--sm { --tc-w: 66px; --tc-h: 92px; }
+  .turn-card--sm .turn-card__label { font-size: 0.82rem; }
+
+  .turn-card--t1     { --tc-color: var(--aetherium); }
+  .turn-card--t2     { --tc-color: var(--breach); }
+  .turn-card--t3     { --tc-color: var(--color-zauber); }
+  .turn-card--t4     { --tc-color: var(--verdant); }
+  .turn-card--t12    { --tc-color: var(--color-plan); }
+  .turn-card--t34    { --tc-color: var(--color-kristall); }
+  .turn-card--wild   { --tc-color: var(--parchment); }
+  .turn-card--nemesis   { --tc-color: var(--ember); }
+  .turn-card--malstrom  { --tc-color: var(--ember); }
+  .turn-card--malstrom .turn-card__oval {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc-color) 70%, transparent),
+                0 0 0 5px color-mix(in srgb, var(--tier-s) 55%, transparent),
+                0 0 26px -2px color-mix(in srgb, var(--tc-color) 70%, transparent);
+    animation: tord-malstrom-pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes tord-malstrom-pulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.18); }
+  }
+  .turn-card--facedown {
+    background: linear-gradient(160deg, #23213a, #14131f 70%);
+  }
+  .turn-card--facedown .turn-card__oval {
+    background: rgba(255,255,255,0.03);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .turn-card--facedown .turn-card__label { color: var(--parchment-dim); font-size: 1.1rem; }
+
+  .turn-card--empty {
+    border-style: dashed;
+    background: transparent;
+    box-shadow: none;
+  }
+  .turn-card--empty .turn-card__oval { display: none; }
+  .turn-card--empty::after {
+    content: '—';
+    color: var(--parchment-dim);
+    font-size: 1.4rem;
+  }
+
+  /* ---- Aktionsreihe (Zug beenden, Vorschau, Deck aufdecken) ---- */
+  .tord-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .tord-kbd {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 0.78rem;
+    padding: 1px 7px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.04);
+    color: var(--parchment-dim);
+    margin-left: 6px;
+  }
+
+  /* ---- Peek-Box ---- */
+  .tord-peek {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.02);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .tord-peek-text {
+    font-family: var(--serif-body);
+    color: var(--parchment-dim);
+    font-size: 0.92rem;
+  }
+  .tord-peek-text strong { color: var(--parchment); }
+
+  /* ---- Aufgedecktes Deck (reorderbar) ---- */
+  .tord-reveal {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+  .tord-reveal-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .tord-reveal-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: grab;
+  }
+  .tord-reveal-item.is-dragging { opacity: 0.4; }
+  .tord-reveal-item__pos {
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    color: var(--parchment-dim);
+  }
+  .tord-reveal-item__nudge {
+    display: flex;
+    gap: 4px;
+  }
+  .tord-nudge-btn {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    line-height: 1;
+    padding: 3px 7px;
+    border-radius: 3px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--parchment-dim);
+    cursor: pointer;
+  }
+  .tord-nudge-btn:hover:not(:disabled) { border-color: var(--aetherium-dim); color: var(--parchment); }
+  .tord-nudge-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ---- Ablagestapel / Verlauf ---- */
+  .tord-history {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+  .tord-history-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .tord-history-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .tord-history-item__idx {
+    font-family: var(--sans);
+    font-size: 0.68rem;
+    color: var(--parchment-dim);
+  }
+  .tord-history-divider {
+    align-self: center;
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    color: var(--tier-s);
+    padding: 0 4px;
+    white-space: nowrap;
+  }
+  .tord-history-empty {
+    font-family: var(--serif-body);
+    color: var(--parchment-dim);
+    font-size: 0.9rem;
+    font-style: italic;
+  }
+
+  /* ---- Sonderfunktionen (seltene Ausnahmefälle, bewusst unauffällig/eingeklappt) ---- */
+  .tord-special {
+    margin-top: 22px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--line);
+  }
+  .tord-special-body {
+    margin-top: 12px;
+  }
+  .tord-special-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .tord-special-actions .btn.is-active {
+    border-color: var(--aetherium-dim);
+    color: var(--parchment);
+    background: rgba(255,255,255,0.04);
+  }
+  .tord-special-picker-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .tord-special-pick {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: var(--sans);
+  }
+  .tord-special-pick .turn-card { transition: transform 0.12s, box-shadow 0.12s; }
+  .tord-special-pick:hover .turn-card {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 26px -12px rgba(0,0,0,0.65), inset 0 0 0 1px rgba(255,255,255,0.05);
+  }
+  .tord-special-pick__label {
+    font-size: 0.72rem;
+    color: var(--parchment-dim);
+  }
+
+  /* ---- Test-Setup-Panel (checkbox-Zeile) ---- */
+  .tord-check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .tord-check-row:last-child { border-bottom: none; }
+  .tord-check-row input[type="checkbox"] {
+    accent-color: var(--aetherium);
+    width: 17px;
+    height: 17px;
+    margin-top: 2px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .tord-check-row label { cursor: pointer; }
+  .tord-check-row__title { font-family: var(--sans); font-size: 0.95rem; color: var(--parchment); display: block; }
+  .tord-check-row__hint { font-family: var(--serif-body); font-size: 0.85rem; color: var(--parchment-dim); margin-top: 2px; }
+
+  /* ---- Debug-Panel (nur Prototyp) ---- */
+  .tord-debug {
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 0.78rem;
+    color: var(--parchment-dim);
+    white-space: pre-wrap;
+    line-height: 1.6;
+  }
+  .tord-marker {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    color: var(--void);
+    background: var(--tier-s);
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+</style>
+</head>
+<body>
+
+<main id="app">
+
+  <div class="hero">
+    <p class="hero__kicker">Prototyp — separat testbar</p>
+    <h1 class="hero__title">Reihenfolge-Randomizer</h1>
+    <p class="hero__lede">Test-Umgebung für die neue Kampf-Detail-Section. Erst nach Freigabe wird dieser Block in <code>#screen-battle</code> gemergt.</p>
+  </div>
+
+  <!-- ============================================================
+       1) TEST-KONFIGURATION — NICHT Teil des Merges.
+       Im echten App: Spieleranzahl kommt aus der Expedition (app.plan),
+       die zwei "Erweiterte Regeln"-Schalter wandern in #screen-options
+       (Default: an, persistiert wie die übrigen Optionen).
+       Die Malstrom-Erkennung erfolgt im echten App automatisch anhand
+       des aktiven Erzfeindes (nem.id) statt über einen manuellen Schalter.
+     ============================================================ -->
+  <div class="panel tord-testpanel">
+    <span class="tord-marker">Nur Prototyp — entfällt beim Merge</span>
+    <div class="panel__title">Test-Konfiguration</div>
+    <p class="panel__hint">Simuliert die Werte, die im echten App bereits aus der Expedition/den Optionen kommen.</p>
+
+    <div class="field-row">
+      <div class="field field--narrow">
+        <span>Spieleranzahl (aus Expeditions-Erstellung)</span>
+        <select id="cfgPlayerCount">
+          <option value="2">2 Spieler</option>
+          <option value="3">3 Spieler</option>
+          <option value="4" selected>4 Spieler</option>
+          <option value="4-easy">4 Spieler: einfaches Spiel</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="group-label">Erweiterte Regeln (später: Options-Screen, Default an)</div>
+    <div class="tord-check-row">
+      <input type="checkbox" id="cfgRuleNoTriple" checked>
+      <label for="cfgRuleNoTriple">
+        <span class="tord-check-row__title">Nemesis maximal 2 Züge in Folge</span>
+        <span class="tord-check-row__hint">Verhindert z.B. 2× Erzfeind am Rundenende + 2× Erzfeind nach dem Mischen direkt danach (4 in Folge).</span>
+      </label>
+    </div>
+    <div class="tord-check-row">
+      <input type="checkbox" id="cfgRuleNoFirstTurn" checked>
+      <label for="cfgRuleNoFirstTurn">
+        <span class="tord-check-row__title">Nemesis darf einen neuen Kampf nicht eröffnen</span>
+        <span class="tord-check-row__hint">Gilt nur für die allererste aufgedeckte Karte eines neuen Kampfes.</span>
+      </label>
+    </div>
+
+    <div class="group-label">Erzfeind-Sonderkarte (im echten App automatisch anhand des aktiven Erzfeindes)</div>
+    <div class="tord-check-row">
+      <input type="checkbox" id="cfgMalstrom">
+      <label for="cfgMalstrom">
+        <span class="tord-check-row__title">Malstrom-Wiederkehrer aktiv (Sturmangriff-Karte statt einer der 2 "Erzfeind"-Karten)</span>
+        <span class="tord-check-row__hint">Ersetzt genau <strong>eine</strong> der 2 "Erzfeind"-Karten im Reihenfolgestapel durch "Sturmangriff" — die zweite Erzfeind-Karte bleibt unverändert. Nur relevant, wenn Malstrom-Wiederkehrer als Nemesis dieses Kampfes ausgewählt ist.</span>
+      </label>
+    </div>
+
+    <div class="actions actions--end">
+      <button class="btn btn--ghost btn--small" id="btnNewFight">↺ Neuen Kampf starten (Deck neu aufbauen)</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       BEGIN: zu mergender Abschnitt
+       Ziel: #screen-battle in index.html, direkt ÜBER der .actions-Zeile
+       mit "Zurück zur Übersicht" / "Niederlage" / "Sieg".
+     ============================================================ -->
+  <div class="panel" id="tordPanel">
+    <div class="panel__title">Reihenfolge <span class="count-badge" id="tordRoundBadge"></span></div>
+
+    <div class="tord-status" id="tordStatus"></div>
+
+    <div class="tord-stage">
+      <div id="tordCurrentCardSlot"></div>
+      <div class="tord-current-info">
+        <p class="tord-current-label" id="tordCurrentLabel">Aktuell an der Reihe</p>
+        <h2 class="tord-current-turntext" id="tordCurrentTurnText"></h2>
+        <p class="tord-current-hint" id="tordCurrentHint"></p>
+      </div>
+    </div>
+
+    <div class="tord-actions">
+      <button class="btn btn--primary" id="btnAdvanceTurn">Zug beenden &amp; nächste Karte<span class="tord-kbd">Leertaste</span></button>
+      <button class="btn btn--ghost" id="btnPeek">Nächste Karte einsehen</button>
+      <button class="btn btn--ghost" id="btnRevealDeck">Restliches Deck aufdecken</button>
+    </div>
+
+    <div id="tordPeekSlot"></div>
+
+    <div class="tord-reveal" id="tordRevealSection" hidden>
+      <div class="panel__title" style="font-size:1.05rem;">Aufgedecktes Deck <span style="color:var(--parchment-dim); font-weight:400; font-size:0.85rem;">(Reihenfolge per Drag &amp; Drop oder Pfeile anpassbar)</span></div>
+      <p class="panel__hint" style="margin-bottom:6px;">Die linkeste Karte wird als nächstes gezogen.</p>
+      <div class="tord-reveal-row" id="tordRevealRow"></div>
+      <div class="actions actions--start">
+        <button class="btn btn--ghost btn--small" id="btnHideReveal">Wieder verdecken</button>
+      </div>
+    </div>
+
+    <div class="tord-history">
+      <div class="panel__title" style="font-size:1.05rem;">Ablagestapel <span style="color:var(--parchment-dim); font-weight:400; font-size:0.85rem;">(bereits erfolgte Züge dieser Runde — wird beim Mischen für die Folgerunde zurückgesetzt)</span></div>
+      <div class="tord-history-row" id="tordHistoryRow"></div>
+    </div>
+
+    <div class="tord-special">
+      <button class="btn btn--ghost btn--small" id="btnToggleSpecial">Sonderfunktionen ▾</button>
+      <div class="tord-special-body" id="tordSpecialBody" hidden>
+        <p class="panel__hint">Nur für seltene Sonderfälle (z. B. Karten- oder Nemesis-Effekte, die eine bereits abgelegte Karte dieser Runde zurück ins Deck mischen).</p>
+        <div class="tord-special-actions">
+          <button class="btn btn--ghost btn--small" id="btnSpecialPlayer">Spielerkarte zurückmischen</button>
+          <button class="btn btn--ghost btn--small" id="btnSpecialNemesis">Erzfeindkarte zurückmischen</button>
+        </div>
+        <div id="tordSpecialPickerRow"></div>
+      </div>
+    </div>
+  </div>
+  <!-- ============================================================
+       END: zu mergender Abschnitt
+     ============================================================ -->
+
+  <div class="actions">
+    <button class="btn btn--ghost" id="btnMockBack">Zurück zur Übersicht</button>
+    <div class="actions actions--outcome-gap">
+      <button class="btn btn--loss" id="btnMockLoss">Niederlage</button>
+      <button class="btn btn--victory" id="btnMockWin">Sieg</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       DEBUG — NICHT Teil des Merges. Zeigt internen State zur Kontrolle
+       der Regel-Logik (Streak, Fight-Start-Flag, Zyklus-Zähler).
+     ============================================================ -->
+  <div class="panel">
+    <span class="tord-marker">Nur Prototyp — entfällt beim Merge</span>
+    <div class="panel__title" style="font-size:1.05rem;">Debug-Info</div>
+    <div class="tord-debug" id="tordDebug"></div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ================================================================================================
+   REIHENFOLGE-RANDOMIZER — Kernlogik
+   ------------------------------------------------------------------------------------------------
+   Offizielle Regel (Aeon's End, Reihenfolgedeck):
+     "Locate the turn order cards based on selected number of players. Shuffle and place facedown
+      on the table. This is the turn order deck."
+     "At the start of each turn, flip the top card of the turn order deck over into a discard pile
+      of turn order cards."
+     "The revealed player or nemesis now takes their turn."
+     "When the turn order deck is empty and a new card must be drawn or revealed, shuffle the
+      discard pile to form a new turn order deck and draw the top card."
+     "Do not shuffle the discard pile until you need to draw or reveal a new card."
+
+   Randomisierung ist hier bewusst NICHT seed-deterministisch (anders als der Rest der App via
+   seededRng/seededShuffle in plan.js) — der Nutzer will für den Reihenfolge-Randomizer eine
+   komplett frische Zufälligkeit bei jedem Mischvorgang, ohne Bias/Gedächtnis.
+   ================================================================================================ */
+
+// ---- Deck-Zusammensetzung je Spieleranzahl (immer exakt 6 Karten: 4 Spieler-Slots + 2 Nemesis-Slots) ----
+const PLAYER_COUNT_DECKS = {
+  '2':      ['1', '1', '2', '2', 'nemesis', 'nemesis'],
+  '3':      ['1', '2', '3', 'wild', 'nemesis', 'nemesis'],
+  '4':      ['1', '2', '3', '4', 'nemesis', 'nemesis'],
+  '4-easy': ['1-2', '1-2', '3-4', '3-4', 'nemesis', 'nemesis'],
+};
+
+// ---- Kartentyp-Metadaten (deutsche Beschriftung; Referenzkarten sind englisch — Mapping laut
+//      Nutzer-Vorgabe: "Eure Wahl" = Wild, "Erzfeind" = Nemesis, "Sturmangriff" = Malstrom) ----
+// sfx: Platzhalter-ID für zukünftige Soundeffekte je Karte (Punkt: "Perspektivisch soll jede
+// Reihenfolgekarte einen eigenen Soundeffekt bekommen" — Architektur jetzt schon vorsehen, auch
+// wenn noch keine echten Dateien existieren; playSfx() schlägt lautlos fehl, falls Datei fehlt,
+// analog zum bestehenden SFX-Muster in app.js).
+const CARD_META = {
+  '1':        { label: '1',      cls: 't1',      turnText: 'Spieler 1 ist an der Reihe',              isNemesis: false, sfx: 'turn_1' },
+  '2':        { label: '2',      cls: 't2',      turnText: 'Spieler 2 ist an der Reihe',              isNemesis: false, sfx: 'turn_2' },
+  '3':        { label: '3',      cls: 't3',      turnText: 'Spieler 3 ist an der Reihe',              isNemesis: false, sfx: 'turn_3' },
+  '4':        { label: '4',      cls: 't4',      turnText: 'Spieler 4 ist an der Reihe',              isNemesis: false, sfx: 'turn_4' },
+  '1-2':      { label: '1/2',    cls: 't12',     turnText: 'Spieler 1 oder 2 ist an der Reihe',       isNemesis: false, sfx: 'turn_1_2' },
+  '3-4':      { label: '3/4',    cls: 't34',     turnText: 'Spieler 3 oder 4 ist an der Reihe',       isNemesis: false, sfx: 'turn_3_4' },
+  'wild':     { label: 'Eure Wahl', cls: 'wild', turnText: 'Ein Spieler eurer Wahl ist an der Reihe', isNemesis: false, sfx: 'turn_wild' },
+  'nemesis':  { label: 'Erzfeind', cls: 'nemesis', turnText: 'Der Erzfeind ist an der Reihe',         isNemesis: true,  sfx: 'turn_nemesis' },
+  'malstrom_assault': {
+    // Kurzes Label statt "Sturmangriff", damit es analog zu "Erzfeind" gut auf das Kartenoval
+    // passt. Der Sonderregel-Effekt (Schaden je Marker) wird bewusst NICHT in dieser Karte
+    // abgebildet — sie ist im Kern nur eine spezielle Erzfeind-Karte, deren Regeltext am Tisch
+    // nachgeschlagen wird, nicht hier im Randomizer.
+    label: 'Malstrom', cls: 'malstrom', turnText: 'Sturmangriff — Malstrom-Wiederkehrer ist an der Reihe',
+    isNemesis: true, sfx: 'turn_malstrom',
+  },
+};
+
+// ---- SFX-Stub: Architektur für künftige Soundeffekte je Reihenfolgekarte. Dateien existieren
+//      aktuell noch nicht -> play() schlägt einfach lautlos fehl (.catch), analog zu playSfx()
+//      in app.js. Sobald echte Dateien vorhanden sind, reicht es, sie unter dem sfx-Key abzulegen. */
+const TORD_SFX_FILES = {
+  // turn_1: 'soundeffects/turn_1.mp3', usw. — bewusst noch leer, siehe Kommentar oben.
+};
+function playTordSfx(sfxKey) {
+  const src = TORD_SFX_FILES[sfxKey];
+  if (!src) return;
+  try {
+    const audio = new Audio(src);
+    audio.play().catch(() => {});
+  } catch (e) { /* ignore */ }
+}
+
+// ---- State ----
+const state = {
+  playerCountKey: '4',
+  malstromActive: false,
+  ruleNoTriple: true,
+  ruleNoFirstTurn: true,
+
+  deck: [],              // Karten (Typ-Keys) der AKTUELLEN Runde, Index 0 = nächste zu ziehende Karte
+  currentCycleDiscard: [], // Ablagestapel NUR der aktuellen Runde — wird beim Neu-Mischen für die
+                           // Folgerunde geleert (Anzeige soll immer nur "diese Runde" zeigen).
+  currentCard: null,      // Typ-Key der aktuell aufgedeckten Karte
+  round: 0,               // Anzahl bereits aufgedeckter Karten in diesem Kampf (fortlaufend, über alle Runden)
+  nemesisStreak: 0,        // Anzahl Nemesis-Züge in ununterbrochener Folge (überlebt Mischen!)
+  isFirstDeckOfFight: true, // nur die ALLERERSTE Karte des Kampfes darf durch die "kein Start"-Regel blockiert werden
+  peekOpen: false,
+  revealOpen: false,
+
+  // Sonderfunktionen (selten benötigt, daher standardmäßig eingeklappt):
+  specialOpen: false,       // Bereich "Sonderfunktionen" generell auf-/zugeklappt
+  specialPickerMode: null,  // 'player' | 'nemesis' | null — welcher der beiden Picker gerade offen ist
+};
+
+function buildDeckList() {
+  const base = PLAYER_COUNT_DECKS[state.playerCountKey].slice();
+  if (state.malstromActive) {
+    // Ersetzt genau eine der 2 "nemesis"-Karten durch die Sturmangriff-Sonderkarte.
+    const idx = base.indexOf('nemesis');
+    if (idx !== -1) base[idx] = 'malstrom_assault';
+  }
+  return base;
+}
+
+function isNemesisType(cardKey) {
+  const meta = CARD_META[cardKey];
+  return !!(meta && meta.isNemesis);
+}
+
+function shuffle(arr) {
+  const copy = arr.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+// Regel-konformes Mischen per Rejection Sampling: mischt so lange neu, bis die aktiven
+// Erweiterten Regeln erfüllt sind. `carriedStreak` = Nemesis-Streak, der über den Mischvorgang
+// hinweg weiterzählt (Regeln gelten ÜBER Misch-Grenzen hinweg, siehe Nutzer-Beispiel:
+// "2x Erzfeind am Rundenende -> mischen -> 2x Erzfeind am Rundenanfang" darf NICHT 4 in Folge ergeben).
+function shuffleRespectingRules(cards, { carriedStreak, isFightStart }) {
+  const MAX_TRIES = 1000;
+  for (let attempt = 0; attempt < MAX_TRIES; attempt++) {
+    const candidate = shuffle(cards);
+
+    if (state.ruleNoFirstTurn && isFightStart && isNemesisType(candidate[0])) continue;
+
+    if (state.ruleNoTriple) {
+      let streak = carriedStreak;
+      let violated = false;
+      for (const cardKey of candidate) {
+        if (isNemesisType(cardKey)) {
+          streak++;
+          if (streak > 2) { violated = true; break; }
+        } else {
+          streak = 0;
+        }
+      }
+      if (violated) continue;
+    }
+
+    return candidate;
+  }
+  // Fallback (sollte praktisch nie erreicht werden, da immer erfüllbare Anordnungen existieren):
+  return shuffle(cards);
+}
+
+function startNewFight() {
+  state.deck = shuffleRespectingRules(buildDeckList(), { carriedStreak: 0, isFightStart: true });
+  state.currentCycleDiscard = [];
+  state.currentCard = null;
+  state.round = 0;
+  state.nemesisStreak = 0;
+  state.isFirstDeckOfFight = true;
+  state.peekOpen = false;
+  state.revealOpen = false;
+  state.specialPickerMode = null;
+  // Direkt die erste Karte aufdecken, statt einen leeren "Kampf noch nicht gestartet"-Zustand
+  // anzuzeigen — advanceTurn() zieht hier einfach die oberste Karte des frisch gemischten Decks.
+  advanceTurn();
+}
+
+// Zieht (bzw. deckt auf) die nächste Karte. Mischt NUR hier lazily nach, wenn das Deck leer ist —
+// peek()/revealDeck() dürfen laut Regel ("Do not shuffle the discard pile until you need to draw
+// or reveal a new card") niemals selbst einen Mischvorgang auslösen.
+function advanceTurn() {
+  const justFinishedCard = state.currentCard;
+
+  if (state.deck.length === 0) {
+    // Die Runde ist komplett aufgedeckt -> für die Folgerunde neu mischen. Der Pool sind alle
+    // Karten dieser Runde: der bisherige Ablagestapel + die gerade aktive letzte Karte (die
+    // physisch ebenfalls im Ablagestapel liegt, exakt wie die offizielle Regel: "shuffle the
+    // discard pile to form a new turn order deck").
+    const pool = state.currentCycleDiscard.concat(justFinishedCard !== null ? [justFinishedCard] : []);
+    state.deck = shuffleRespectingRules(pool, {
+      carriedStreak: state.nemesisStreak,
+      isFightStart: false, // die "kein Start"-Regel gilt nur für die ALLERERSTE Karte des Kampfes
+    });
+    // Ablagestapel-Anzeige: zurücksetzen, da die neue Runde bei 0 aufgedeckten Karten beginnt.
+    state.currentCycleDiscard = [];
+  } else if (justFinishedCard !== null) {
+    state.currentCycleDiscard.push(justFinishedCard);
+  }
+
+  state.currentCard = state.deck.shift();
+  state.round++;
+  state.isFirstDeckOfFight = false;
+  state.peekOpen = false;
+  state.revealOpen = false;
+  // Der Ablagestapel dieser Runde hat sich gerade verändert (neue Karte dazu, ggf. neu gemischt) —
+  // ein noch offener Sonderfunktionen-Picker würde sonst eine Karte zeigen, die es so nicht mehr gibt.
+  state.specialPickerMode = null;
+
+  if (isNemesisType(state.currentCard)) {
+    state.nemesisStreak++;
+  } else {
+    state.nemesisStreak = 0;
+  }
+
+  playTordSfx(CARD_META[state.currentCard].sfx);
+  render();
+}
+
+// Peek = rein lesend, löst NIE ein Mischen aus. Wenn das Deck gerade leer ist (letzte Karte wurde
+// bereits aufgedeckt, aktueller Zug aber noch nicht beendet), gibt es laut Regel keine "nächste
+// Karte" — das Mischen darf erst beim nächsten tatsächlichen Zug-Ende passieren.
+function peekNextCard() {
+  return state.deck.length > 0 ? state.deck[0] : null;
+}
+
+function toggleRevealDeck() {
+  state.revealOpen = !state.revealOpen;
+  render();
+}
+
+function togglePeek() {
+  state.peekOpen = !state.peekOpen;
+  render();
+}
+
+function moveRevealCard(fromIndex, toIndex) {
+  if (toIndex < 0 || toIndex >= state.deck.length || fromIndex === toIndex) return;
+  const [moved] = state.deck.splice(fromIndex, 1);
+  state.deck.splice(toIndex, 0, moved);
+  render();
+}
+
+// ---- Sonderfunktionen: seltene Ausnahmefälle, in denen eine bereits abgelegte Karte dieser
+//      Runde (z.B. durch einen Karten- oder Nemesis-Effekt) zurück ins Deck gemischt wird. ----
+function isPlayerCardType(typeKey) {
+  return !CARD_META[typeKey].isNemesis;
+}
+function isGeneralNemesisType(typeKey) {
+  // Bewusst NUR die reguläre "Erzfeind"-Karte, nicht die Malstrom-Sonderkarte — die zählt als
+  // eigener Spezialfall und ist hier nicht gemeint ("1 allgemeine Erzfeindkarte").
+  return typeKey === 'nemesis';
+}
+
+// Liefert die im Ablagestapel dieser Runde vorhandenen Kartentypen, die zum Filter passen —
+// dedupliziert mit Anzahl (z.B. bei 2 Spielern kann "1" zweimal im Ablagestapel liegen).
+function distinctDiscardTypes(filterFn) {
+  const counts = new Map();
+  state.currentCycleDiscard.forEach((typeKey) => {
+    if (!filterFn(typeKey)) return;
+    counts.set(typeKey, (counts.get(typeKey) || 0) + 1);
+  });
+  return counts;
+}
+
+function toggleSpecial() {
+  state.specialOpen = !state.specialOpen;
+  if (!state.specialOpen) state.specialPickerMode = null;
+  render();
+}
+
+function setSpecialPickerMode(mode) {
+  state.specialPickerMode = state.specialPickerMode === mode ? null : mode;
+  render();
+}
+
+// Nimmt genau EIN Exemplar von typeKey aus dem Ablagestapel dieser Runde und mischt es zurück
+// ins aktuelle Deck — unter Beachtung der Erweiterten Regeln, analog zum normalen Neu-Mischen.
+function returnDiscardCardToDeck(typeKey) {
+  const idx = state.currentCycleDiscard.indexOf(typeKey);
+  if (idx === -1) return;
+  state.currentCycleDiscard.splice(idx, 1);
+  state.deck = shuffleRespectingRules(state.deck.concat([typeKey]), {
+    carriedStreak: state.nemesisStreak,
+    isFightStart: false,
+  });
+  state.specialPickerMode = null;
+  render();
+}
+
+// ---- Rendering ----
+function cardEl({ typeKey, size, faceDown }) {
+  if (faceDown) {
+    return `<div class="turn-card turn-card--${size} turn-card--facedown"><div class="turn-card__oval"><span class="turn-card__label">?</span></div></div>`;
+  }
+  if (!typeKey) {
+    return `<div class="turn-card turn-card--${size} turn-card--empty"></div>`;
+  }
+  const meta = CARD_META[typeKey];
+  return `<div class="turn-card turn-card--${size} turn-card--${meta.cls}"><div class="turn-card__oval"><span class="turn-card__label">${meta.label}</span></div></div>`;
+}
+
+function render() {
+  renderStatus();
+  renderStage();
+  renderPeek();
+  renderReveal();
+  renderHistory();
+  renderSpecial();
+  renderDebug();
+}
+
+function renderStatus() {
+  const el = document.getElementById('tordStatus');
+  const roundBadge = document.getElementById('tordRoundBadge');
+  roundBadge.textContent = state.round > 0 ? `Zug ${state.round}` : '';
+  el.innerHTML = `
+    <span>Deck: <strong>${state.deck.length}</strong> Karte(n)</span>
+    <span>Ablagestapel: <strong>${state.currentCycleDiscard.length}</strong> Karte(n)</span>
+    <span>Nemesis-Serie: <strong>${state.nemesisStreak}</strong></span>
+  `;
+}
+
+function renderStage() {
+  const slot = document.getElementById('tordCurrentCardSlot');
+  const label = document.getElementById('tordCurrentLabel');
+  const turnText = document.getElementById('tordCurrentTurnText');
+  const hint = document.getElementById('tordCurrentHint');
+
+  if (state.currentCard === null) {
+    slot.innerHTML = cardEl({ typeKey: null, size: 'lg', faceDown: false });
+    label.textContent = 'Noch kein Zug';
+    turnText.textContent = 'Kampf noch nicht gestartet';
+    hint.textContent = 'Klicke unten auf "Zug beenden & nächste Karte" (oder Leertaste), um den Kampf zu beginnen.';
+    return;
+  }
+
+  const meta = CARD_META[state.currentCard];
+  slot.innerHTML = cardEl({ typeKey: state.currentCard, size: 'lg', faceDown: false });
+  label.textContent = 'Aktuell an der Reihe';
+  turnText.textContent = meta.turnText;
+  hint.textContent = meta.isNemesis
+    ? 'Der Erzfeind führt seinen Zug gemäß seiner Karte aus.'
+    : 'Dieser Spieler führt seinen Zug aus.';
+}
+
+function renderPeek() {
+  const slot = document.getElementById('tordPeekSlot');
+  const btn = document.getElementById('btnPeek');
+  btn.textContent = state.peekOpen ? 'Vorschau schließen' : 'Nächste Karte einsehen';
+
+  if (!state.peekOpen) { slot.innerHTML = ''; return; }
+
+  const next = peekNextCard();
+  if (next === null) {
+    slot.innerHTML = `
+      <div class="tord-peek">
+        ${cardEl({ typeKey: null, size: 'sm', faceDown: false })}
+        <p class="tord-peek-text">Keine nächste Karte verfügbar — das Deck ist leer und wird erst beim nächsten Zugende neu gemischt.</p>
+      </div>`;
+    return;
+  }
+  const meta = CARD_META[next];
+  slot.innerHTML = `
+    <div class="tord-peek">
+      ${cardEl({ typeKey: next, size: 'sm', faceDown: false })}
+      <p class="tord-peek-text">Als Nächstes: <strong>${meta.label}</strong> — ${meta.turnText}</p>
+    </div>`;
+}
+
+function renderReveal() {
+  const section = document.getElementById('tordRevealSection');
+  const row = document.getElementById('tordRevealRow');
+  const btn = document.getElementById('btnRevealDeck');
+  btn.textContent = state.revealOpen ? 'Deck wieder verdecken' : 'Restliches Deck aufdecken';
+  section.hidden = !state.revealOpen;
+  if (!state.revealOpen) { row.innerHTML = ''; return; }
+
+  row.innerHTML = state.deck.map((typeKey, i) => {
+    return `
+      <div class="tord-reveal-item" draggable="true" data-reveal-index="${i}">
+        <span class="tord-reveal-item__pos">${i === 0 ? 'als nächstes' : `Position ${i + 1}`}</span>
+        ${cardEl({ typeKey, size: 'md', faceDown: false })}
+        <div class="tord-reveal-item__nudge">
+          <button class="tord-nudge-btn" data-action="move-left" data-index="${i}" ${i === 0 ? 'disabled' : ''} title="Nach links (früher)">◂</button>
+          <button class="tord-nudge-btn" data-action="move-right" data-index="${i}" ${i === state.deck.length - 1 ? 'disabled' : ''} title="Nach rechts (später)">▸</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  bindRevealInteractions(row);
+}
+
+function bindRevealInteractions(row) {
+  let dragSrcIndex = null;
+  row.querySelectorAll('[data-reveal-index]').forEach((itemEl) => {
+    itemEl.addEventListener('dragstart', () => {
+      dragSrcIndex = Number(itemEl.dataset.revealIndex);
+      itemEl.classList.add('is-dragging');
+    });
+    itemEl.addEventListener('dragend', () => itemEl.classList.remove('is-dragging'));
+    itemEl.addEventListener('dragover', (e) => e.preventDefault());
+    itemEl.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const targetIndex = Number(itemEl.dataset.revealIndex);
+      if (dragSrcIndex !== null) moveRevealCard(dragSrcIndex, targetIndex);
+      dragSrcIndex = null;
+    });
+  });
+  row.querySelectorAll('[data-action="move-left"]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const i = Number(btn.dataset.index);
+      moveRevealCard(i, i - 1);
+    });
+  });
+  row.querySelectorAll('[data-action="move-right"]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const i = Number(btn.dataset.index);
+      moveRevealCard(i, i + 1);
+    });
+  });
+}
+
+// Ablagestapel zeigt bewusst NUR die bereits aufgedeckten Karten der AKTUELLEN Runde (nicht die
+// gerade aktive Karte selbst, die ja noch oben in der "Aktuell an der Reihe"-Bühne steht) — bei
+// z.B. 6 Karten ist das Ablagestapel bei der 6. (letzten) offenen Karte also 5 Karten groß.
+// Sobald für die Folgerunde neu gemischt wird, wird currentCycleDiscard in advanceTurn() geleert,
+// wodurch diese Anzeige automatisch wieder bei 0 startet.
+function renderHistory() {
+  const row = document.getElementById('tordHistoryRow');
+  if (state.currentCycleDiscard.length === 0) {
+    row.innerHTML = '<span class="tord-history-empty">Noch keine Karten in dieser Runde abgelegt.</span>';
+    return;
+  }
+
+  row.innerHTML = state.currentCycleDiscard.map((typeKey, i) => `
+      <div class="tord-history-item">
+        <span class="tord-history-item__idx">${i + 1}</span>
+        ${cardEl({ typeKey, size: 'sm', faceDown: false })}
+      </div>`).join('');
+}
+
+function renderSpecial() {
+  const body = document.getElementById('tordSpecialBody');
+  const toggleBtn = document.getElementById('btnToggleSpecial');
+  toggleBtn.textContent = state.specialOpen ? 'Sonderfunktionen ▴' : 'Sonderfunktionen ▾';
+  body.hidden = !state.specialOpen;
+  if (!state.specialOpen) return;
+
+  const playerBtn = document.getElementById('btnSpecialPlayer');
+  const nemesisBtn = document.getElementById('btnSpecialNemesis');
+  playerBtn.classList.toggle('is-active', state.specialPickerMode === 'player');
+  nemesisBtn.classList.toggle('is-active', state.specialPickerMode === 'nemesis');
+
+  const row = document.getElementById('tordSpecialPickerRow');
+  if (state.specialPickerMode === null) { row.innerHTML = ''; return; }
+
+  const filterFn = state.specialPickerMode === 'player' ? isPlayerCardType : isGeneralNemesisType;
+  const counts = distinctDiscardTypes(filterFn);
+
+  if (counts.size === 0) {
+    row.innerHTML = '<p class="tord-history-empty" style="margin-top:10px;">Keine passende Karte im Ablagestapel dieser Runde.</p>';
+    return;
+  }
+
+  const items = [];
+  counts.forEach((count, typeKey) => {
+    const meta = CARD_META[typeKey];
+    items.push(`
+      <button class="tord-special-pick" type="button" data-return-type="${typeKey}" title="Zurück ins Deck mischen">
+        ${cardEl({ typeKey, size: 'sm', faceDown: false })}
+        <span class="tord-special-pick__label">${meta.label}${count > 1 ? ` ×${count}` : ''}</span>
+      </button>`);
+  });
+  row.innerHTML = `<div class="tord-special-picker-row">${items.join('')}</div>`;
+
+  row.querySelectorAll('[data-return-type]').forEach((btn) => {
+    btn.addEventListener('click', () => returnDiscardCardToDeck(btn.dataset.returnType));
+  });
+}
+
+function renderDebug() {
+  const el = document.getElementById('tordDebug');
+  el.textContent = JSON.stringify({
+    playerCountKey: state.playerCountKey,
+    malstromActive: state.malstromActive,
+    ruleNoTriple: state.ruleNoTriple,
+    ruleNoFirstTurn: state.ruleNoFirstTurn,
+    deck: state.deck,
+    currentCycleDiscard: state.currentCycleDiscard,
+    currentCard: state.currentCard,
+    round: state.round,
+    nemesisStreak: state.nemesisStreak,
+    isFirstDeckOfFight: state.isFirstDeckOfFight,
+  }, null, 2);
+}
+
+// ---- Toast (rein für die Mock-CTAs unten, minimal, analog zum bestehenden .toast-Muster) ----
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 1800);
+}
+
+// ---- Events ----
+document.getElementById('cfgPlayerCount').addEventListener('change', (e) => {
+  state.playerCountKey = e.target.value;
+  startNewFight();
+});
+document.getElementById('cfgMalstrom').addEventListener('change', (e) => {
+  state.malstromActive = e.target.checked;
+  startNewFight();
+});
+document.getElementById('cfgRuleNoTriple').addEventListener('change', (e) => {
+  state.ruleNoTriple = e.target.checked;
+  render();
+});
+document.getElementById('cfgRuleNoFirstTurn').addEventListener('change', (e) => {
+  state.ruleNoFirstTurn = e.target.checked;
+  render();
+});
+document.getElementById('btnNewFight').addEventListener('click', startNewFight);
+
+document.getElementById('btnAdvanceTurn').addEventListener('click', advanceTurn);
+document.getElementById('btnPeek').addEventListener('click', togglePeek);
+document.getElementById('btnRevealDeck').addEventListener('click', toggleRevealDeck);
+document.getElementById('btnHideReveal').addEventListener('click', toggleRevealDeck);
+
+document.getElementById('btnToggleSpecial').addEventListener('click', toggleSpecial);
+document.getElementById('btnSpecialPlayer').addEventListener('click', () => setSpecialPickerMode('player'));
+document.getElementById('btnSpecialNemesis').addEventListener('click', () => setSpecialPickerMode('nemesis'));
+
+document.getElementById('btnMockBack').addEventListener('click', () => showToast('Platzhalter — nur Layout-Vorschau ("Zurück zur Übersicht")'));
+document.getElementById('btnMockLoss').addEventListener('click', () => showToast('Platzhalter — nur Layout-Vorschau ("Niederlage")'));
+document.getElementById('btnMockWin').addEventListener('click', () => showToast('Platzhalter — nur Layout-Vorschau ("Sieg")'));
+
+// Leertaste = Zug beenden & nächste Karte, außer der Fokus liegt gerade auf einem Formularelement
+// (Checkbox/Select/Button etc.) — dort soll Leertaste weiterhin ihr natives Verhalten haben
+// (z.B. Checkbox toggeln), statt vom Randomizer "gestohlen" zu werden.
+document.addEventListener('keydown', (e) => {
+  if (e.code !== 'Space') return;
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (['input', 'select', 'textarea', 'button'].includes(tag)) return;
+  e.preventDefault();
+  advanceTurn();
+});
+
+// ---- Init ----
+startNewFight();
+</script>
+
+</body>
+</html>

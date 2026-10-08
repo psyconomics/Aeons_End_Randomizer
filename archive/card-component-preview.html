@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karten-Komponente — Vorschau (Zauber / Kristall / Artefakt)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #0e0d14;
+    --deep: #171a2e;
+    --deep-2: #1f2340;
+    --aetherium: #7c5cff;
+    --aetherium-dim: #5a41b8;
+    --breach: #34d0c4;
+    --parchment: #e8e1cf;
+    --parchment-dim: #b9b2a0;
+    --ember: #c1443b;
+    --line: rgba(232, 225, 207, 0.14);
+    --select: #57d768;
+
+    --color-zauber: #eedb96;
+    --color-zauber-dim: #3c3520;
+    --color-kristall: #8ebbcc;
+    --color-kristall-dim: #22373f;
+    --color-relic: #94c1f4;
+    --color-relic-dim: #1f2f42;
+
+    /* Schätze: eigene Typfarben je Stufe, an die vorhandene Farbskala angeglichen (ähnliche Sättigung/
+       Helligkeit wie Zauber/Kristall/Relic oben) statt der bisherigen Platzhalterwerte. */
+    --color-schatz-1: #d6c785;
+    --color-schatz-1-dim: #3c3720;
+    --color-schatz-1-shard: #bda9d1;
+    --color-schatz-1-shard-dim: #33283e;
+    --color-schatz-1-spell: #d6c785;
+    --color-schatz-1-spell-dim: #3c3720;
+    --color-schatz-2: #6ac8bf;
+    --color-schatz-2-dim: #1c3b38;
+    --color-schatz-3: #ebbf47;
+    --color-schatz-3-dim: #413516;
+
+    /* Nemesis-Kartentypen (Angriff/Plan/Monster): tonal an Zauber/Kristall/Relic angeglichen und
+       gleichmäßig über den Farbkreis verteilt, damit sich alle drei klar unterscheiden (Stand
+       2026-09-25, released nach styles.css) — Plan=Gelb, Angriff=Pink/Magenta, Monster=Lila. */
+    --color-angriff: #d3699e;
+    --color-angriff-dim: #381e2b;
+    --color-plan: #d3c769;
+    --color-plan-dim: #38351e;
+    --color-monster: #b56bc7;
+    --color-monster-dim: #331e38;
+
+    /* Magier-Karte ("lang"): eigener, kühl-metallischer Ton, bewusst abgesetzt von den warmen
+       Zauber/Schatz-Farben und dem satten Kristall/Relic/Monster-Violett/Blau. */
+    --color-magier: #9fb2c8;
+    --color-magier-dim: #232b36;
+
+    /* Tier-Rating Magier: S (Gold) > A (Grün) > B (Türkis) > C (Amber) > D (Rot) — bewusst eine
+       "Ampel"-artige Reihenfolge statt neutraler Grauwerte, damit die Wertigkeit sofort ablesbar ist. */
+    --tier-s: #ffd54f;
+    --tier-a: #57d768;
+    --tier-b: #34d0c4;
+    --tier-c: #e0b968;
+    --tier-d: #b5453d;
+
+    --serif-display: 'Cormorant Garamond', Georgia, serif;
+    --serif-body: 'Source Serif 4', Georgia, serif;
+    --sans: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    /* Punkt: Kartentitel in "Friz Quadrata Bold" (lizenzpflichtig, daher nur greifend, falls lokal
+       installiert — Copperplate/Cinzel als optisch nahe, quadratisch wirkende Ersatzschriften) und
+       Kartentext in "Charter Roman" (auf macOS/iOS als Systemschrift vorhanden, daher meist wirklich
+       aktiv, sonst Bitstream Charter / Source Serif 4 als Ersatz). */
+    --title-face: 'Friz Quadrata', 'Friz Quadrata Bold', Copperplate, 'Cinzel', var(--serif-display);
+    --body-face: Charter, 'Bitstream Charter', var(--serif-body), Georgia, serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 48px 32px;
+    background: var(--void);
+    background-image: radial-gradient(circle at 20% 0%, rgba(124,92,255,0.08), transparent 55%);
+    color: var(--parchment);
+    font-family: var(--sans);
+    min-height: 100vh;
+  }
+
+  .lab-header { max-width: 900px; margin: 0 auto 36px; }
+  .lab-header h1 {
+    font-family: var(--serif-display);
+    font-size: 1.6rem;
+    margin: 0 0 6px;
+    font-weight: 600;
+  }
+  .lab-header p {
+    margin: 0;
+    color: var(--parchment-dim);
+    font-family: var(--serif-body);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    max-width: 640px;
+  }
+
+  .lab-row {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  /* ===================== Karten-Basis (aus styles.css übernommen) ===================== */
+  .card {
+    --accent: var(--parchment-dim);
+    --accent-dim: rgba(255,255,255,0.04);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--accent-dim);
+    padding: 14px 16px 12px;
+    width: 240px;
+    height: 300px;
+    flex: 0 0 240px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: grid;
+    /* Kosten oben rechts, darunter (nie abgekürzter) Titel, dann Effekttext füllt den Rest, Meta unten */
+    grid-template-rows: auto auto 1fr auto;
+    gap: 6px;
+    user-select: none;
+  }
+  .card:hover { transform: translateY(-2px); }
+
+  /* -------- Hintergrund-Symbol je Kartentyp: unten rechts, groß, hinter dem Text --------
+     Fester Rahmen — bleibt für alle Kartentypen an derselben Stelle (unten rechts).
+     Bug-Fix (iPad, 2026-09-25): Die Symbole waren bisher Unicode-Textzeichen (✦◆❖★▲◐●◈), die in
+     keiner unserer Web-Fonts existieren — der Browser wich daher pro Zeichen auf eine System-
+     Symbolschrift aus, und macOS/iPadOS Safari nutzen dafür UNTERSCHIEDLICHE Symbolschriften mit
+     unterschiedlichen Glyphen-Metriken. Das führte auf dem iPad zu falscher Größe/abgeschnittenen
+     Symbolen, obwohl hier (Desktop) alles korrekt aussah. Endgültiger Fix: Symbole sind jetzt reine
+     CSS-Formen (.card__icon-bg-shape, clip-path/border-radius, siehe unten) statt Text — dieselbe
+     Bounding-Box für jeden Typ, komplett schriftunabhängig (1:1 mit styles.css).
+     Bug-Fix 2 (2026-09-25): Die Box hing zuvor per negativem bottom/right über den Kartenrand
+     hinaus — die Karte hat aber overflow:hidden, wodurch Formen mit Fläche in den äußeren Ecken
+     (Achteck/Artefakt) am Kartenrand beschnitten wurden und dadurch kaum noch vom Kristall zu
+     unterscheiden waren. Fix: Box liegt jetzt komplett INNERHALB der Karte, mit festem
+     Innenabstand (padding-bottom 40px, padding-right 10px) statt Off-Card-Überhang.
+     Alignment-Fix (2026-09-25, AC „Karten-Symbole"): padding-bottom war ein geratener Fixwert und
+     lag nicht zuverlässig auf Höhe der Meta-Zeile (dort stehen Typ-Name + Tags wie „Impuls").
+     Bug-Fix 3 (2026-09-25): Der erste Versuch dafür (grid-row: 1 / -1, bottom: 0) hat die Box an
+     der letzten Grid-Zeile verankert, ABER wenn diese Zeile durch ein Tag höher wurde (z.B.
+     „Schwach"-Pille in .card__meta), wuchs die Grid-Zeile mit — und damit verschob sich bottom:0
+     relativ zur GESAMTEN Karte je nachdem, ob ein Tag vorhanden war (Karten ohne Tag hatten das
+     Symbol dadurch höher als Karten mit Tag). Endgültiger Fix: Box ist kein Grid-Item mehr,
+     sondern rein relativ zur Karte selbst (.card hat position: relative) absolut positioniert —
+     bottom/right sind damit für jede Karte exakt derselbe Fixwert, unabhängig von Grid-
+     Inhalt/Zeilenhöhen. bottom 12px entspricht dem unteren Card-Padding (.card padding:
+     14px 16px 12px). */
+  .card__icon-bg {
+    position: absolute;
+    bottom: 12px;
+    right: 10px;
+    width: 96px;
+    height: 96px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* Hintergrund-Symbole sind Inline-SVG-Linien-Icons (siehe CARD_TYPE_ICON_SVG in app.js): Typfarbe als
+     Strich, niedrige Deckkraft. Keine Schrift, kein clip-path -> iPad/Safari-sicher. */
+  .card__icon-bg svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    stroke: var(--accent);
+    fill: none;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.16;
+  }
+
+  /* Feste Zeilenzuordnung statt impliziter Reihenfolge: Schätze haben keine .card__cost (kein Kind
+     in Zeile 1) — ohne explizites grid-row würde .card__name sonst in Zeile 1 rutschen und
+     .card__effect die (für Meta gedachte) letzte Auto-Zeile bekommen. So bleiben Symbol-, Titel- und
+     Effekt-Position bei Schätzen exakt analog zu Zauber/Kristall/Relic. */
+  .card__cost { grid-row: 1; }
+  .card__name { grid-row: 2; }
+  .card__effect { grid-row: 3; }
+  .card__meta { grid-row: 4; }
+
+  /* -------- Kosten: eigene Zeile oben rechts -------- */
+  .card__cost {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+    font-family: var(--title-face);
+    font-weight: 400;
+    font-size: 1.3rem;
+    /* Kosten-Zahl in derselben Farbe wie das (weiß gefilterte) Æther-Icon, nicht die Typfarbe */
+    color: var(--parchment);
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+  }
+  .card__cost img {
+    /* relativ zur Schriftgröße der Zahl (1.3rem), damit Icon und Zahl gleich hoch wirken */
+    width: 1.05em;
+    height: 1.05em;
+    /* dichter an die Zahl heranrücken statt großem Icon-Zahl-Abstand */
+    margin-right: -2px;
+    /* aether.svg ist hart schwarz gefüllt (kein currentColor) — per Filter auf Parchment-Ton geholt */
+    filter: brightness(0) saturate(100%) invert(1) sepia(8%) saturate(200%) hue-rotate(340deg);
+    opacity: 0.92;
+  }
+
+  /* -------- Titel: eigene, volle Zeile unter den Kosten — wird nie abgekürzt/geklammert -------- */
+  .card__name {
+    font-family: var(--title-face);
+    font-size: 1.08rem;
+    line-height: 1.24;
+    font-weight: 400;
+    /* Titel wieder in der typ-spezifischen Farbe; Kosten (s.o.) bleiben unabhängig davon weiß */
+    color: var(--accent);
+    position: relative;
+    z-index: 1;
+    /* bewusst kein overflow/line-clamp: der Titel darf beliebig viele Zeilen belegen */
+  }
+
+  .card__effect {
+    font-family: var(--body-face);
+    font-size: 0.83rem;
+    color: var(--parchment-dim);
+    line-height: 1.42;
+    position: relative;
+    z-index: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .card__meta {
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* -------- Kartentags (Entwurf, Punkt 39) --------
+     Herkunft: das "keywords"-Feld aus dem Original-Randomizer (github.com/on3iro/aeons-end-randomizer),
+     u.a. "weak"/"strong" als Legacy-Kampagnen-Aufwertungsstufe sowie reine Mechanik-Marker
+     (Echo/Anhängen/Verkettet/Stille/Impuls/...). Bewusst als eigene Pille NACH dem Typ-Namen in
+     .card__meta statt als zusätzliche Zeile — Tags sind zusätzliche Metadaten, kein neuer Bereich.
+     weak/strong bekommen die bereits etablierten Tier-Farben (--tier-d / --tier-s), damit die
+     "Aufwertungsstufe" auf denselben Blick wie das Magier-Tier-Rating lesbar ist; alle anderen
+     (reinen Mechanik-)Tags bleiben neutral (--line/--parchment-dim), da sie keine Wertung transportieren. */
+  .card__tag {
+    font-family: var(--sans);
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid var(--line);
+    color: var(--parchment-dim);
+    background: rgba(255,255,255,0.04);
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .card__tag--weak { border-color: var(--tier-d); color: var(--tier-d); background: rgba(181,69,61,0.1); }
+  .card__tag--strong { border-color: var(--tier-s); color: var(--tier-s); background: rgba(255,213,79,0.1); }
+
+  .lab-caption {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: var(--parchment-dim);
+    font-family: var(--sans);
+  }
+  .lab-card-wrap { display: flex; flex-direction: column; align-items: center; }
+  .lab-section { max-width: 900px; margin: 56px auto 0; }
+  .lab-section h2 {
+    font-family: var(--serif-display);
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0 0 4px;
+    border-top: 1px solid var(--line);
+    padding-top: 32px;
+  }
+  .lab-section > p {
+    margin: 0 0 22px;
+    color: var(--parchment-dim);
+    font-family: var(--sans);
+    font-size: 0.86rem;
+    line-height: 1.5;
+    max-width: 640px;
+  }
+
+  /* ===================== Chip-Komponenten (Magier, Nemesis-Vorbereitung) — aus styles.css übernommen ===================== */
+  .chipgrid { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 10px 16px;
+    font-family: var(--sans);
+    font-size: 0.92rem;
+    background: rgba(255,255,255,0.02);
+    user-select: none;
+  }
+
+  /* -------- Tier-Rating-Label: kleines rundes Badge oben rechts auf dem Chip -------- */
+  .chip__tier {
+    position: absolute;
+    top: -9px;
+    right: -9px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 5px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--title-face);
+    font-size: 0.86rem;
+    color: var(--void);
+    border: 1px solid rgba(0,0,0,0.3);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+    z-index: 2;
+  }
+  .chip__tier--S { background: var(--tier-s); }
+  .chip__tier--A { background: var(--tier-a); }
+  .chip__tier--B { background: var(--tier-b); }
+  .chip__tier--C { background: var(--tier-c); }
+  .chip__tier--D { background: var(--tier-d); color: var(--parchment); }
+  /* Name/Titel-Zeile: globaler Titel-Font (--title-face, wie .card__name), statt des generischen
+     --sans, den .chip zuvor auch für den Namen geerbt hat — Nemesis- und Magier-Chips sollen wie
+     die restliche Anwendung dieselben globalen Fonts nutzen. */
+  .chip__name { font-family: var(--title-face); font-size: 1rem; }
+  .chip .chip__sub { display: block; font-family: var(--sans); font-size: 0.78rem; color: var(--parchment-dim); margin-top: 2px; }
+  .chipgrid--mages .chip { min-width: 160px; }
+  /* Nemesis-Vorbereitung: schmale Pille statt großer Karte, --accent/--accent-dim inline via cardAccentStyle() */
+  .chip--nemesis { border-color: var(--accent); background: var(--accent-dim); }
+  .chip--nemesis .chip__sub { color: var(--accent); }
+
+  /* -------- Magier "lang": volle Kartenkomponente analog Zauber/Kristall/Relic -------- */
+  /* Titel-Zeile (Name) belegt Zeile 1 statt der globalen Zeile 2 (dort steht bei den anderen
+     Kartentypen normalerweise die Kosten-Zeile, die Magier nicht haben); Untertitel (Rolle)
+     bekommt eine eigene, kleinere Zeile 2 direkt darunter. */
+  .card--mage .card__name { grid-row: 1; }
+  .card__title {
+    grid-row: 2;
+    font-family: var(--sans);
+    font-size: 0.76rem;
+    letter-spacing: 0.02em;
+    color: var(--parchment-dim);
+    margin-top: -4px;
+    margin-bottom: 4px;
+    position: relative;
+    z-index: 1;
+  }
+  /* Tier-Rating: rundes Badge oben rechts *innerhalb* der Karte (die Karte hat overflow:hidden
+     wegen des Hintergrund-Symbols, ein am Rand überstehendes Badge wie beim Chip würde daher
+     abgeschnitten). Rein informell — keine Spiellogik hängt daran. */
+  .card__tier {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--title-face);
+    font-size: 0.92rem;
+    color: var(--void);
+    border: 1px solid rgba(0,0,0,0.3);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+    z-index: 2;
+  }
+  .card__tier--S { background: var(--tier-s); }
+  .card__tier--A { background: var(--tier-a); }
+  .card__tier--B { background: var(--tier-b); }
+  .card__tier--C { background: var(--tier-c); }
+  .card__tier--D { background: var(--tier-d); color: var(--parchment); }
+</style>
+</head>
+<body>
+
+  <div class="lab-header">
+    <h1>Karten-Komponente — Style Guide</h1>
+    <p><b>Lebende Referenz, kein Wegwerf-Prototyp mehr:</b> diese Datei wird nach jedem Merge in <code>styles.css</code>/<code>app.js</code> aktuell gehalten, damit sie jederzeit den Status quo aller Kartentypen/-farben zeigt (Kosten oben rechts, Titel darunter, Typ-Symbol unten rechts im Hintergrund, Schriften Friz Quadrata Bold (Titel) / Charter Roman (Text) mit Ersatzschriften). Bei künftigen Farb-/Größen-Anpassungen zuerst hier ändern und abgleichen, dann 1:1 in die Produktions-Dateien übernehmen.</p>
+  </div>
+
+  <div class="lab-row">
+
+    <div class="lab-card-wrap">
+      <div class="card" style="--accent:var(--color-zauber);--accent-dim:var(--color-zauber-dim);">
+        <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5c3-1.5 6-1.5 8 0v14c-2-1.5-5-1.5-8 0Z"/><path d="M20 5c-3-1.5-6-1.5-8 0v14c2-1.5 5-1.5 8 0Z"/><path d="M12 9l1.3 2.6L16 12l-2.7.4L12 15l-1.3-2.6L8 12l2.7-.4Z"/></svg></span>
+        <span class="card__cost"><img src="../icons/svg/aether.svg" alt="Æther">6</span>
+        <span class="card__name">Chaosbogen</span>
+        <span class="card__effect">Wirken: Füge 3 Schaden zu. +2 Schaden für jeden gebundenen Zauber, der an diesen Riss direkt angrenzt.</span>
+        <span class="card__meta">Zauber</span>
+      </div>
+      <div class="lab-caption">Zauber</div>
+    </div>
+
+    <div class="lab-card-wrap">
+      <div class="card" style="--accent:var(--color-kristall);--accent-dim:var(--color-kristall-dim);">
+        <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9l4-6h8l4 6-8 11Z"/><path d="M4 9h16"/><path d="M9 3l1.5 6L12 20"/><path d="M15 3l-1.5 6L12 20"/></svg></span>
+        <span class="card__cost"><img src="../icons/svg/aether.svg" alt="Æther">4</span>
+        <span class="card__name">Rohdiamant</span>
+        <span class="card__effect">Erhalte 2 Æ. Ist dies dein genau zweiter gerade ausgespielter Rohdiamant? Erhalte 2 Æ.</span>
+        <span class="card__meta">Kristall</span>
+      </div>
+      <div class="lab-caption">Kristall</div>
+    </div>
+
+    <div class="lab-card-wrap">
+      <div class="card" style="--accent:var(--color-relic);--accent-dim:var(--color-relic-dim);">
+        <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6l-8-3Z"/></svg></span>
+        <span class="card__cost"><img src="../icons/svg/aether.svg" alt="Æther">8</span>
+        <span class="card__name">Ring der Fürsprache mit einem sehr langen Namen</span>
+        <span class="card__effect">Zu Beginn deines Hauptzugs: Erhalte 1 Æ. Dieser Effekt endet, sobald du eine Karte mit Kosten 6+ erwirbst.</span>
+        <span class="card__meta">Artefakt</span>
+      </div>
+      <div class="lab-caption">Artefakt</div>
+    </div>
+
+  </div>
+
+  <!-- ===================== Kartentags (Entwurf, Punkt 39) ===================== -->
+  <div class="lab-section">
+    <h2>Kartentags — Entwurf (Punkt 39)</h2>
+    <p>Übernommen aus dem <code>keywords</code>-Feld des Original-Randomizers (github.com/on3iro/aeons-end-randomizer), begrenzt auf die in unserer Anwendung tatsächlich verfügbaren Spiele/Erweiterungen: 44 unserer 179 Marktplatzkarten tragen mindestens ein solches Keyword, verteilt über 7 Werte (Schwach, Stark, Impuls, Echo, Verknüpfbar, Anhängen, Betäuben). <b>Schwach/Stark</b> stammt aus der Legacy-Kampagne (Auf-/Abwertungsstufe einer Karte) und bekommt bewusst die Tier-Farben (Rot/Gold) — alle anderen Keywords sind reine Mechanik-Marker und bleiben neutral eingefärbt. Die Pille sitzt in der Meta-Zeile direkt hinter dem Typ-Namen, damit sie beim Scannen des Marktplatzes sofort mit auffällt, ohne eine eigene Kartenzeile zu verbrauchen. Noch nicht final: ob mehrere Tags pro Karte (siehe Kristall unten, „Impuls" + „Stark") auf Dauer zu unruhig wirken.</p>
+    <div class="lab-row">
+
+      <div class="lab-card-wrap">
+        <div class="card" style="--accent:var(--color-zauber);--accent-dim:var(--color-zauber-dim);">
+          <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5c3-1.5 6-1.5 8 0v14c-2-1.5-5-1.5-8 0Z"/><path d="M20 5c-3-1.5-6-1.5-8 0v14c2-1.5 5-1.5 8 0Z"/><path d="M12 9l1.3 2.6L16 12l-2.7.4L12 15l-1.3-2.6L8 12l2.7-.4Z"/></svg></span>
+          <span class="card__cost"><img src="../icons/svg/aether.svg" alt="Æther">2</span>
+          <span class="card__name">Feuer-Chakra</span>
+          <span class="card__effect">Wirken: Füge 2 Schaden zu.</span>
+          <span class="card__meta">Zauber <span class="card__tag card__tag--weak">Schwach</span></span>
+        </div>
+        <div class="lab-caption">Zauber · Tag „Schwach" (Legacy)</div>
+      </div>
+
+      <div class="lab-card-wrap">
+        <div class="card" style="--accent:var(--color-kristall);--accent-dim:var(--color-kristall-dim);">
+          <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9l4-6h8l4 6-8 11Z"/><path d="M4 9h16"/><path d="M9 3l1.5 6L12 20"/><path d="M15 3l-1.5 6L12 20"/></svg></span>
+          <span class="card__cost"><img src="../icons/svg/aether.svg" alt="Æther">3</span>
+          <span class="card__name">Statischer Sand</span>
+          <span class="card__effect">Erhalte 2 Æ. Erhalte 1 Impuls. ODER Wirfst du jetzt 1 Impuls ab? Erhalte 3 Æ.</span>
+          <span class="card__meta">Kristall <span class="card__tag">Impuls</span><span class="card__tag card__tag--strong">Stark</span></span>
+        </div>
+        <div class="lab-caption">Kristall · Tags „Impuls" + „Stark" (Legacy)</div>
+      </div>
+
+      <div class="lab-card-wrap">
+        <div class="card" style="--accent:var(--color-zauber);--accent-dim:var(--color-zauber-dim);">
+          <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5c3-1.5 6-1.5 8 0v14c-2-1.5-5-1.5-8 0Z"/><path d="M20 5c-3-1.5-6-1.5-8 0v14c2-1.5 5-1.5 8 0Z"/><path d="M12 9l1.3 2.6L16 12l-2.7.4L12 15l-1.3-2.6L8 12l2.7-.4Z"/></svg></span>
+          <span class="card__cost"><img src="../icons/svg/aether.svg" alt="Æther">5</span>
+          <span class="card__name">Riss-Suche</span>
+          <span class="card__effect">ECHO. Wirken: Füge 1 Schaden zu. Wähle 1 anderen Spieler und bündele 1 seiner Risse deiner Wahl.</span>
+          <span class="card__meta">Zauber <span class="card__tag">Echo</span></span>
+        </div>
+        <div class="lab-caption">Zauber · Tag „Echo" (Mechanik-Marker)</div>
+      </div>
+
+      <div class="lab-card-wrap">
+        <div class="card" style="--accent:var(--color-relic);--accent-dim:var(--color-relic-dim);">
+          <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6l-8-3Z"/></svg></span>
+          <span class="card__cost"><img src="../icons/svg/aether.svg" alt="Æther">4</span>
+          <span class="card__name">Ätherkanal</span>
+          <span class="card__effect">Hänge diese Karte an 1 Riss deiner Wahl an (bei einem Spieler deiner Wahl). Angehängt: Wird ein Zauber von diesem Riss gewirkt? Der Spieler, der den Zauber gewirkt hat, erhält 1 Æ.</span>
+          <span class="card__meta">Artefakt <span class="card__tag">Anhängen</span></span>
+        </div>
+        <div class="lab-caption">Artefakt · Tag „Anhängen" (Mechanik-Marker)</div>
+      </div>
+
+      <div class="lab-card-wrap">
+        <div class="card" style="--accent:var(--color-zauber);--accent-dim:var(--color-zauber-dim);">
+          <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5c3-1.5 6-1.5 8 0v14c-2-1.5-5-1.5-8 0Z"/><path d="M20 5c-3-1.5-6-1.5-8 0v14c2-1.5 5-1.5 8 0Z"/><path d="M12 9l1.3 2.6L16 12l-2.7.4L12 15l-1.3-2.6L8 12l2.7-.4Z"/></svg></span>
+          <span class="card__cost"><img src="../icons/svg/aether.svg" alt="Æther">4</span>
+          <span class="card__name">Thermalpfeil</span>
+          <span class="card__effect">Verknüpfbar. (Bis zu 2 verknüpfbare Zauber dürfen gleichzeitig an 1 Riss gebunden sein.) Wirken: Füge 3 Schaden zu. Ist dies dein mindestens 2. gerade gewirkter Thermalpfeil? Erhalte 1 Energie.</span>
+          <span class="card__meta">Zauber <span class="card__tag">Verknüpfbar</span></span>
+        </div>
+        <div class="lab-caption">Zauber · Tag „Verknüpfbar" (Mechanik-Marker)</div>
+      </div>
+
+      <div class="lab-card-wrap">
+        <div class="card" style="--accent:var(--color-kristall);--accent-dim:var(--color-kristall-dim);">
+          <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9l4-6h8l4 6-8 11Z"/><path d="M4 9h16"/><path d="M9 3l1.5 6L12 20"/><path d="M15 3l-1.5 6L12 20"/></svg></span>
+          <span class="card__cost"><img src="../icons/svg/aether.svg" alt="Æther">3</span>
+          <span class="card__name">Besänftiger Petalit</span>
+          <span class="card__effect">Erhalte 2 Æ. ODER Betäube 1 MONSTER deiner Wahl.</span>
+          <span class="card__meta">Kristall <span class="card__tag">Betäuben</span></span>
+        </div>
+        <div class="lab-caption">Kristall · Tag „Betäuben" (Legacy, Mechanik-Marker)</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== Schätze Stufe I / II / III ===================== -->
+  <div class="lab-section">
+    <h2>Schätze — Stufe I / II / III</h2>
+    <p>Gleiche Kartenbasis wie oben, aber ohne Kosten-Zeile (Schätze haben keine Æther-Kosten, nur eine Stufe 1–3). Effekttext stammt aus <code>data.js</code> (übernommen aus dem Original-Randomizer) und enthält bereits eigenes Markup wie <code>&lt;b&gt;</code> oder <code>&lt;span class="aether"&gt;</code>.</p>
+    <div class="lab-row">
+
+      <div class="lab-card-wrap">
+        <div class="card card--treasure" style="--accent:var(--color-schatz-1-shard);--accent-dim:var(--color-schatz-1-shard-dim);">
+          <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 17.5 8.5 15.5 17 12 21.5 7.5 15 6.5 8Z"/><path d="M12 2.5 11 9.5 15.5 17"/><path d="M11 9.5 6.5 8"/></svg></span>
+          <span class="card__name">Dezmodias Nihil-Scherbe</span>
+          <span class="card__effect">Erhalte 2 <span class="aether">&AElig;</span>, aber nicht zum Erwerb von Artefakten oder Zaubern.</span>
+          <span class="card__meta">Schatz Stufe I</span>
+        </div>
+        <div class="lab-caption">Schatz Stufe I</div>
+      </div>
+
+      <div class="lab-card-wrap">
+        <div class="card card--treasure" style="--accent:var(--color-schatz-2);--accent-dim:var(--color-schatz-2-dim);">
+          <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 2.5 12 7.5l3.5-5"/><circle cx="12" cy="14.5" r="6.5"/><path d="M7.2 14.5c1.3-2.2 2.9-3.3 4.8-3.3s3.5 1.1 4.8 3.3c-1.3 2.2-2.9 3.3-4.8 3.3s-3.5-1.1-4.8-3.3Z"/><circle cx="12" cy="14.5" r="1.3"/></svg></span>
+          <span class="card__name">Auge des Malstroms</span>
+          <span class="card__effect"><b>Im Spielaufbau:</b><br/> Legt diese Karte neben einen Vorrat mit <span class="aether">&AElig;</span>-Kosten von 4 oder mehr.<br/><br/> <b>Immer wenn ein Spieler eine Karte dieses Vorrats erwirbt:</b><br/> Dieser Spieler erhält 1 Energie.</span>
+          <span class="card__meta">Schatz Stufe II</span>
+        </div>
+        <div class="lab-caption">Schatz Stufe II</div>
+      </div>
+
+      <div class="lab-card-wrap">
+        <div class="card card--treasure" style="--accent:var(--color-schatz-3);--accent-dim:var(--color-schatz-3-dim);">
+          <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 4.5 9.5 9 13l3-6.5 3 6.5 4.5-3.5L19 19Z"/><path d="M5 21.5h14"/><circle cx="4.5" cy="7.5" r="1"/><circle cx="12" cy="4" r="1"/><circle cx="19.5" cy="7.5" r="1"/><path d="M12 14l1.4 1.8-1.4 1.8-1.4-1.8Z"/></svg></span>
+          <span class="card__name">Alchemistischer Destillier-Kolben</span>
+          <span class="card__effect"><b>In deinem Schritt <i>Aktionen ausführen</i> (1x pro Zug):</b><br/> Zerstöre eine Karte aus deiner Hand. Erhalte 3 <span class="aether">&AElig;</span>.</span>
+          <span class="card__meta">Schatz Stufe III</span>
+        </div>
+        <div class="lab-caption">Schatz Stufe III</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== Nemesis-Vorbereitung: Angriff / Plan / Monster ===================== -->
+  <div class="lab-section">
+    <h2>Nemesis-Vorbereitung — Angriff / Plan / Monster</h2>
+    <p>Schmale Pillen statt großer Karten (<code>.chip.chip--nemesis</code>) — die verbesserten Nemesis-Karten, die vor einer Expedition bereitgelegt werden. Ohne Hintergrund-Symbol; die SVGs (Schwert, Sanduhr, Totenkopf) sind in <code>CARD_TYPE_ICON_SVG</code> für diesen Fall hinterlegt.</p>
+    <div class="chipgrid">
+      <div class="chip chip--nemesis" style="--accent:var(--color-angriff);--accent-dim:var(--color-angriff-dim);">
+        <span class="chip__name">Zischende Säure</span><span class="chip__sub">Angriff</span>
+      </div>
+      <div class="chip chip--nemesis" style="--accent:var(--color-plan);--accent-dim:var(--color-plan-dim);">
+        <span class="chip__name">Verängstigen</span><span class="chip__sub">Plan</span>
+      </div>
+      <div class="chip chip--nemesis" style="--accent:var(--color-monster);--accent-dim:var(--color-monster-dim);">
+        <span class="chip__name">Opferung</span><span class="chip__sub">Monster</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== Magier — Kurz (Chip) ===================== -->
+  <div class="lab-section">
+    <h2>Magier — Kurz (Chip)</h2>
+    <p>Kompakte <code>.chip</code>-Kachel für Kontexte mit vielen Magiern gleichzeitig (Charakterauswahl, Kaserne) — ohne Typ-Akzentfarbe, mit rundem Tier-Rating-Label (<code>.chip__tier</code>) oben rechts. Die Farbe (Gold/Grün/Türkis/Amber/Rot) macht die Wertigkeit auf einen Blick erkennbar; rein informell, ohne Spiellogik.</p>
+    <div class="chipgrid chipgrid--mages">
+      <div class="chip"><span class="chip__tier chip__tier--B">B</span><span class="chip__name">Adelheim</span><span class="chip__sub">Riss-Magier-Waffenschmied</span></div>
+      <div class="chip"><span class="chip__tier chip__tier--C">C</span><span class="chip__name">Dezmodia</span><span class="chip__sub">Wunderkind der Leere</span></div>
+    </div>
+  </div>
+
+  <!-- ===================== Magier — Lang (Karte) ===================== -->
+  <div class="lab-section">
+    <h2>Magier — Lang (Karte)</h2>
+    <p>Volle Kartenkomponente analog zu Zauber/Kristall/Artefakt: Name, darunter kleiner die Rolle als Untertitel, Effekttext (die eigentliche Fähigkeit des Magiers), Hintergrund-Symbol unten rechts (hier: Schleuder-Icon (Linien-SVG, wie die übrigen Typen)) sowie das Tier-Label — bei dieser Variante direkt als rundes Badge in der Karte oben rechts statt außen überstehend wie beim Chip, da die Karte <code>overflow: hidden</code> hat.</p>
+    <div class="lab-row">
+
+      <div class="lab-card-wrap">
+        <div class="card card--mage" style="--accent:var(--color-magier);--accent-dim:var(--color-magier-dim);">
+          <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(30 12 12)"><path d="M12 22V12"/><path d="M8 6c0 4 1.5 6 4 6s4-2 4-6"/><path d="M8 6 7 3.5M16 6l1-2.5"/><circle cx="12" cy="6.5" r="2.2"/><path d="M10.5 17h3M10.8 19.5h2.4"/></g></svg></span>
+          <span class="card__tier card__tier--S">S</span>
+          <span class="card__name">Reeve</span>
+          <span class="card__title">Riss-Magier-Elite</span>
+          <span class="card__effect">In deinem Spieler-Zug während Aktionen ausführen: Füge 1 Monster 5 Schaden zu. Füge 1 anderen Monster 3 Schaden zu.</span>
+          <span class="card__meta">Magier</span>
+        </div>
+        <div class="lab-caption">Magier (Tier S)</div>
+      </div>
+
+      <div class="lab-card-wrap">
+        <div class="card card--mage" style="--accent:var(--color-magier);--accent-dim:var(--color-magier-dim);">
+          <span class="card__icon-bg"><svg viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(30 12 12)"><path d="M12 22V12"/><path d="M8 6c0 4 1.5 6 4 6s4-2 4-6"/><path d="M8 6 7 3.5M16 6l1-2.5"/><circle cx="12" cy="6.5" r="2.2"/><path d="M10.5 17h3M10.8 19.5h2.4"/></g></svg></span>
+          <span class="card__tier card__tier--C">C</span>
+          <span class="card__name">Dezmodia</span>
+          <span class="card__title">Wunderkind der Leere</span>
+          <span class="card__effect">Zu Beginn deines Hauptzugs: Wähle einen Zauber oder Kristall auf deinem Riss 4. Erhalte einen Effekt, als hättest du diese Karte gerade gespielt.</span>
+          <span class="card__meta">Magier</span>
+        </div>
+        <div class="lab-caption">Magier (Tier C)</div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

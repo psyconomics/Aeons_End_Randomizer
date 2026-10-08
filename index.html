@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Chronik der Feste — (Expeditions-Generator)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=20261008-7">
+
+<!-- PWA / "Zum Home-Bildschirm hinzufügen" auf iPad -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/aether-icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/aether-icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/aether-icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aeon's End">
+<meta name="theme-color" content="#0e0d14">
+</head>
+<body>
+
+<div class="sigilbar" id="topbar" hidden>
+  <button type="button" class="sigilbar__brand sigilbar__brand--link" id="btnTopbarHome" title="Zur Startseite"><img class="sigilbar__logo" src="icons/aether-icon-64-parchment-inverted.png" alt="" aria-hidden="true">Chronik der Feste</button>
+  <div class="sigilbar__steps" id="topbarInfo"></div>
+</div>
+
+<main id="app">
+
+  <!-- ===================== Startseite ===================== -->
+  <section class="screen" id="screen-home">
+    <div class="hero">
+      <h1 class="hero__title">Deine nächste Aeon's-End-Expedition</h1>
+      <p class="hero__lede">Versammle die Riss-Magier und verteidige die Feste der Letzten Ruhe.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">Neue Expedition</div>
+      <p class="panel__hint">Erzeuge eine neue Expedition mit eigenem oder zufälligem Seed.</p>
+      <p class="panel__hint panel__hint--warning" id="newExpeditionLimitHint" hidden>Du hast bereits 3 Expeditionen gespeichert. Lösche zuerst eine bestehende Kampagne, um eine neue zu starten.</p>
+      <div class="actions actions--end">
+        <button class="btn btn--ghost" id="btnOptions">Optionen</button>
+        <button class="btn btn--primary" id="btnNewExpedition">Neue Expedition</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">Expeditions-Chronik</div>
+      <p class="panel__hint">Errungenschaften, Bestleistungen und deine Bilanz gegen jeden Erzfeind.</p>
+      <div class="actions actions--end">
+        <button class="btn btn--primary" id="btnChronicle">Chronik anzeigen</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">Gespeicherte Expeditionen</div>
+      <p class="panel__hint">Es werden die letzten 3 Expeditionen gespeichert.</p>
+      <div id="savedExpeditions"></div>
+    </div>
+  </section>
+
+  <!-- ===================== Expeditions-Chronik ===================== -->
+  <section class="screen" id="screen-chronicle">
+    <h1 class="section-title">Expeditions-Chronik</h1>
+    <p class="section-lede">Dein Fortschritt über alle Expeditionen hinweg: Errungenschaften, Bestleistungen und deine Bilanz gegen jeden Erzfeind.</p>
+
+    <div class="panel">
+      <div class="panel__title">Bestleistungen</div>
+      <p class="panel__hint">Die drei schnellsten gewonnenen Expeditionen je Spieleranzahl, gemessen an der Gesamtspielzeit.</p>
+      <div class="hs" id="highscoreList"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">Errungenschaften <span class="panel__count" id="achievementsSummary"></span></div>
+      <div class="badge-grid" id="achievementsGrid"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">Erzfeind-Ranking <span class="panel__count" id="nemesisRankingSummary"></span></div>
+      <p class="panel__hint">Siege und Niederlagen je Versuch, durchschnittliche Dauer gewonnener Kämpfe. Die Ampel leitet sich aus der Siegquote ab (grün leicht, gelb mittel, rot schwer) und erscheint ab 5 Versuchen gegen den Erzfeind, davor steht "Offen".</p>
+      <div class="nrank" id="nemesisRankingList"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn--ghost" id="btnChronicleReset">Zurücksetzen</button>
+      <button class="btn btn--ghost" id="btnChronicleBack">Zurück</button>
+    </div>
+  </section>
+
+  <!-- ===================== Optionen ===================== -->
+  <section class="screen" id="screen-options">
+    <h1 class="section-title">Optionen</h1>
+    <p class="section-lede">Wähle, welche Erweiterungen für Magier/Erzfeinde/Schätze zur Verfügung stehen sollen, und ob der Marktplatz aus einem abweichenden Erweiterungs-Pool gespeist werden soll.</p>
+
+    <div class="panel">
+      <div class="panel__title">Erweiterungen (Magier / Erzfeinde / Schätze)</div>
+      <div id="optionsExpansionGroups"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">Marktplatz-Setup</div>
+      <p class="panel__hint">Aus dem Original-Randomizer übernommene Setups steuern, mit welchen Kosten-Einschränkungen die 4 Zauber / 3 Kristalle / 2 Artefakte des Start-Marktplatzes gezogen werden. Mehrere Setups können gleichzeitig aktiv sein — bei jeder neuen Expedition wird eines davon deterministisch über den Seed ausgewählt. Farben: Violett = Kristall, Blau = Artefakt, Beige = Zauber.</p>
+      <div id="optionsMarketSetups"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">Magier — Tier-Liste</div>
+      <p class="panel__hint">Rein informelles Rating als Einschätzungshilfe bei der Charakterauswahl — keine Spiellogik ist daran gebunden. Magier per Drag &amp; Drop in eine andere Zeile ziehen, um die Einordnung anzupassen.</p>
+      <div class="tierboard" id="optionsMageTiers"></div>
+      <div class="actions actions--end">
+        <button class="btn btn--ghost btn--small" id="btnResetMageTiers">Standard-Zuordnung wiederherstellen</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">Reihenfolge-Randomizer — Erweiterte Regeln</div>
+      <p class="panel__hint">Gilt für den Reihenfolge-Randomizer im Kampf-Detail-Screen.</p>
+      <div class="tord-check-row">
+        <input type="checkbox" id="optRuleNoTriple">
+        <label for="optRuleNoTriple">
+          <span class="tord-check-row__title">Nemesis maximal 2 Züge in Folge</span>
+          <span class="tord-check-row__hint">Verhindert z.B. 2× Erzfeind am Rundenende + 2× Erzfeind nach dem Mischen direkt danach (4 in Folge).</span>
+        </label>
+      </div>
+      <div class="tord-check-row">
+        <input type="checkbox" id="optRuleNoFirstTurn">
+        <label for="optRuleNoFirstTurn">
+          <span class="tord-check-row__title">Nemesis darf einen neuen Kampf nicht eröffnen</span>
+          <span class="tord-check-row__hint">Gilt nur für die allererste aufgedeckte Karte eines neuen Kampfes.</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">Kampf-Detail-Screen — Darstellung</div>
+      <div class="tord-check-row">
+        <input type="checkbox" id="optTabletMode">
+        <label for="optTabletMode">
+          <span class="tord-check-row__title">Tablet-Modus</span>
+          <span class="tord-check-row__hint">Aus: klassische Ansicht. An: neue, tablet-optimierte Ansicht mit größeren Karten und HP-Zählern.</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">Expeditionsregeln</div>
+      <div class="tord-check-row">
+        <input type="checkbox" id="optFinalDefeat">
+        <label for="optFinalDefeat">
+          <span class="tord-check-row__title">Finale Niederlage nach 3 verlorenen Kämpfen gegen denselben Erzfeind</span>
+          <span class="tord-check-row__hint">Ist die Option aktiv, endet die Expedition nach der 3. Niederlage in Folge gegen denselben Erzfeind auf dem Game-Over-Screen, statt zur Übersicht zurückzukehren.</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn--ghost" id="btnOptionsBack">Einstellungen übernehmen</button>
+      <div></div>
+    </div>
+  </section>
+
+  <!-- ===================== Neue Expedition ===================== -->
+  <section class="screen" id="screen-new-expedition">
+    <h1 class="section-title">Neue Expedition erzeugen</h1>
+    <p class="section-lede">Gib der Expedition einen Namen und optional einen eigenen Seed. Bleibt der Seed leer, wird beim Erzeugen automatisch ein zufälliger Seed vergeben.</p>
+
+    <div class="panel">
+      <div class="field-row">
+        <div class="field">
+          <span>Name der Expedition</span>
+          <input type="text" id="newExpeditionName">
+        </div>
+        <div class="field field--narrow">
+          <span>Seed (optional)</span>
+          <input type="text" id="newExpeditionSeed" placeholder="leer lassen für Zufall">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <span>Marktplatz-Setup</span>
+          <select id="newExpeditionMarketSetup"></select>
+        </div>
+        <div class="field">
+          <span>Spieleranzahl</span>
+          <select id="newExpeditionPlayerCount">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <!-- Reine Markierung für 4 Spieler ohne eigene Spiellogik (keine offizielle
+                 Regel-Variante): Party-Größe, Magier-Vorschläge (5), Schatz-Ziele und der
+                 Nemesis-A/V-Kartenaufbau bleiben exakt identisch zur normalen Option "4" —
+                 siehe createExpedition() in app.js. Ist jetzt der Default (siehe Nutzer-Vorgabe). -->
+            <option value="4-easy" selected>4 Spieler: einfaches Spiel</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <span>Schwierigkeit</span>
+          <!-- Eigenständige Option, losgelöst von "4 Spieler: einfaches Spiel" — steuert
+               ausschließlich die Start-Werte der Feste-/Erzfeind-Zähler (siehe
+               nemesisStartHealth()/festeStartValue() in app.js). -->
+          <select id="newExpeditionDifficulty">
+            <option value="normal">Normal</option>
+            <option value="leicht" selected>Leicht</option>
+          </select>
+        </div>
+        <div class="field"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn--ghost" id="btnNewExpeditionBack">Zurück</button>
+      <button class="btn btn--primary" id="btnCreateExpedition">Expedition erzeugen</button>
+    </div>
+  </section>
+
+  <!-- ===================== Aufbau 3a: Charakterauswahl ===================== -->
+  <section class="screen" id="screen-build-party">
+    <div class="build-progress"></div>
+    <h1 class="section-title">Aufbau — Charakterauswahl</h1>
+    <p class="section-lede" id="buildPartySeed"></p>
+    <div class="panel">
+      <div class="panel__title">Magier-Vorschläge <span class="count-badge" id="buildPartyCount"></span></div>
+      <p class="panel__hint" id="buildPartyHint">Wähle deine Magier für die Gruppe.</p>
+      <div class="chipgrid chipgrid--mages" id="buildPartyChoices"></div>
+      <div class="synergy-hint" id="buildPartySynergyHint" hidden></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn--ghost" id="btnBuildPartyBack">Zurück</button>
+      <button class="btn btn--primary" id="btnBuildPartyNext">Weiter</button>
+    </div>
+  </section>
+
+  <!-- ===================== Aufbau 3b: Marktplatz-Vorschau ===================== -->
+  <section class="screen" id="screen-build-market">
+    <div class="build-progress"></div>
+    <h1 class="section-title">Aufbau — Marktplatz-Vorschau</h1>
+    <p class="section-lede">Das ist der Start-Marktplatz dieser Expedition (4 Zauber, 3 Kristalle, 2 Artefakte). <span id="buildMarketSetupName"></span></p>
+    <div class="panel" id="buildMarketGroups"></div>
+    <div class="actions">
+      <button class="btn btn--ghost" id="btnBuildMarketBack">Zurück</button>
+      <button class="btn btn--primary" id="btnBuildMarketNext">Weiter</button>
+    </div>
+  </section>
+
+  <!-- ===================== Aufbau 3c: Nemesis-Vorbereitung ===================== -->
+  <section class="screen" id="screen-build-nemesis">
+    <div class="build-progress"></div>
+    <h1 class="section-title">Aufbau — Nemesis-Vorbereitung</h1>
+    <p class="section-lede">Lege alle verbesserten Nemesis-Karten, die diese Expedition insgesamt benötigt, bereit. Welcher Erzfeind welchen Kampf bestreitet, bleibt weiterhin bis zum jeweiligen Reveal ein Geheimnis.</p>
+    <div id="buildNemesisList"></div>
+    <div class="actions">
+      <button class="btn btn--ghost" id="btnBuildNemesisBack">Zurück</button>
+      <div class="actions actions--end">
+        <button class="btn btn--ghost" id="btnBuildNemesisNext">Erzählung generieren</button>
+        <button class="btn btn--primary" id="btnBuildNemesisSkipStory">Expedition starten</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Generierung (Copy & Paste) ===================== -->
+  <section class="screen" id="screen-generate">
+    <div class="build-progress"></div>
+    <h1 class="section-title">Erzählung generieren</h1>
+    <p class="section-lede">Kopiere den Prompt in ein Claude-Fenster, füge die Antwort danach hier ein.</p>
+
+    <div class="actions actions--end actions--gap-below">
+      <button class="btn btn--ghost" id="btnSkipStory">Starte Expedition ohne Erzählung</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">1. Prompt kopieren</div>
+      <p class="panel__hint" id="genCopyHint">Auf manchen Tablets funktioniert das automatische Kopieren nicht — der Prompt steht dann unten als Vorschau: Text per Fingertipp markieren und über das Kontextmenü kopieren.</p>
+      <textarea class="prompt-textarea" id="genPromptText" rows="8" readonly></textarea>
+      <div class="actions actions--end" style="margin-top:14px;">
+        <button class="btn btn--ghost" id="btnCopyPrompt">📋 In die Zwischenablage kopieren</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">2. Antwort einfügen</div>
+      <textarea class="prompt-textarea" id="genResponseInput" rows="10" placeholder="Antwort von Claude hier einfügen…"></textarea>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn--ghost" id="btnGenerateBack">Zurück</button>
+      <button class="btn btn--primary" id="btnSubmitGeneration">Expedition starten</button>
+    </div>
+  </section>
+
+  <!-- ===================== Expeditionsübersicht ===================== -->
+  <section class="screen" id="screen-overview">
+    <div class="hero">
+      <p class="hero__kicker" id="overviewSeed"></p>
+      <h1 class="hero__title" id="overviewName"></h1>
+      <p class="hero__lede" id="overviewScore"></p>
+    </div>
+
+    <div class="actions actions--end actions--gap-below">
+      <button class="btn btn--ghost" id="btnShowBarracks">Kaserne öffnen</button>
+    </div>
+
+    <div class="panel" id="barracksPanel" hidden>
+      <div class="panel__title">Kaserne</div>
+      <p class="panel__hint">Stelle Party, Marktplatz und aktive Schätze aus deiner gesamten Kaserne frei zusammen (entsprechend der Regeln). Eine gültige Auswahl wird automatisch übernommen.</p>
+      <div id="barracksContent"></div>
+      <p class="pool-summary" id="barracksHint"></p>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">Erzfeinde</div>
+      <div class="chipgrid" id="nemesisTiles"></div>
+    </div>
+
+    <div class="panel" id="epiloguePanel" hidden>
+      <div class="chapter__eyebrow">Epilog</div>
+      <h2 class="chapter__title" id="epilogueTitle"></h2>
+      <div class="chapter__body" id="epilogueBody"></div>
+    </div>
+  </section>
+
+  <!-- ===================== Story-Zwischenscreen (nur bei generierter Erzählung) ===================== -->
+  <!-- Zeigt das Kapitel zum als Nächstes enthüllten Erzfeind, bevor es zum Kampf-Detail-Screen
+       geht (siehe openNextBattle() in app.js). Wurde keine Erzählung generiert (storyDisabled),
+       überspringt openNextBattle() diesen Screen komplett und navigiert direkt zu screen-battle. -->
+  <section class="screen" id="screen-story">
+    <h1 class="section-title" id="storyHeading"></h1>
+    <div class="chapter" id="storyChapter"></div>
+    <div class="actions">
+      <button class="btn btn--ghost" id="btnStoryBack">Zurück</button>
+      <button class="btn btn--primary" id="btnStoryStart">Kampf starten</button>
+    </div>
+  </section>
+
+  <!-- ===================== Nemesis-Overlay: Kampf ===================== -->
+  <!-- Zwei koexistierende Kampf-Detail-Screens, umschaltbar über die Option "Tablet-Modus"
+       (app.options.tabletMode, siehe #screen-options und renderTurnOrder() in app.js):
+       - #combatClassicView: der ursprüngliche Screen (gemergt aus turn-order-randomizer-prototype.html).
+       - #combatTabletView: der tablet-optimierte Screen (gemergt aus tablet-combat.html, Stand 2026-09-24).
+       Beide teilen sich denselben Zustand app.runtime.turnOrder — nur die Darstellung unterscheidet
+       sich. Da beide Screens teils gleich benannte UI-Konzepte haben (Reveal-Zeile, Ablagestapel,
+       Sonderfunktionen), sind alle IDs des klassischen Screens mit "Classic" suffixiert, um
+       Kollisionen mit den Tablet-IDs zu vermeiden. Sichtbarkeit wird per [hidden] von renderBattle()
+       gesteuert; die hier gesetzten hidden-Attribute sind nur der Default vor dem ersten Render. -->
+  <section class="screen" id="screen-battle">
+    <h1 class="section-title" id="battleHeading" style="margin-bottom:8px;"></h1>
+
+    <div class="panel" id="beforeFightPanel" hidden style="margin-bottom:18px;">
+      <div id="beforeFightInfo"></div>
+    </div>
+
+    <!-- ===== Klassischer Kampf-Detail-Screen (Standard, app.options.tabletMode === false) ===== -->
+    <div id="combatClassicView">
+      <div class="panel" id="tordPanelClassic">
+        <div class="panel__title">Reihenfolge <span class="count-badge" id="tordTurnBadgeClassic"></span></div>
+
+        <div class="tord-status" id="tordStatusClassic"></div>
+
+        <div class="tord-stage">
+          <div id="tordCurrentCardSlotClassic"></div>
+          <div class="tord-current-info">
+            <p class="tord-current-label" id="tordCurrentLabelClassic">Aktuell an der Reihe</p>
+            <h2 class="tord-current-turntext" id="tordCurrentTurnTextClassic"></h2>
+            <p class="tord-current-hint" id="tordCurrentHintClassic"></p>
+          </div>
+        </div>
+
+        <div class="tord-actions">
+          <button class="btn btn--primary" id="btnAdvanceTurnClassic">Zug beenden &amp; nächste Karte<span class="tord-kbd">Leertaste</span></button>
+          <button class="btn btn--ghost" id="btnPeekClassic">Nächste Karte einsehen</button>
+          <button class="btn btn--ghost" id="btnRevealDeckClassic">Restliches Deck aufdecken</button>
+        </div>
+
+        <div id="tordPeekSlotClassic"></div>
+
+        <div class="tord-reveal" id="tordRevealSectionClassic" hidden>
+          <div class="panel__title" style="font-size:1.05rem;">Aufgedecktes Deck <span style="color:var(--parchment-dim); font-weight:400; font-size:0.85rem;">(Reihenfolge per Drag &amp; Drop oder Pfeile anpassbar)</span></div>
+          <p class="panel__hint" style="margin-bottom:6px;">Die linkeste Karte wird als nächstes gezogen.</p>
+          <div class="tord-reveal-row" id="tordRevealRowClassic"></div>
+          <div class="actions actions--start">
+            <button class="btn btn--ghost btn--small" id="btnHideRevealClassic">Wieder verdecken</button>
+          </div>
+        </div>
+
+        <div class="tord-history">
+          <div class="panel__title" style="font-size:1.05rem;">Ablagestapel <span style="color:var(--parchment-dim); font-weight:400; font-size:0.85rem;">(bereits erfolgte Züge dieser Runde — wird beim Mischen für die Folgerunde zurückgesetzt)</span></div>
+          <div class="tord-history-row" id="tordHistoryRowClassic"></div>
+        </div>
+
+        <div class="tord-special">
+          <button class="btn btn--ghost btn--small" id="btnToggleSpecialClassic">Sonderfunktionen ▾</button>
+          <div class="tord-special-body" id="tordSpecialBodyClassic" hidden>
+            <p class="panel__hint">Nur für seltene Sonderfälle (z. B. Karten- oder Nemesis-Effekte, die eine bereits abgelegte Karte dieser Runde zurück ins Deck mischen).</p>
+            <div class="tord-special-actions">
+              <button class="btn btn--ghost btn--small" id="btnSpecialPlayerClassic">Spielerkarte zurückmischen</button>
+              <button class="btn btn--ghost btn--small" id="btnSpecialNemesisClassic">Erzfeindkarte zurückmischen</button>
+            </div>
+            <div id="tordSpecialPickerRowClassic"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn--ghost" id="btnBattleBackOverviewClassic">Zurück</button>
+        <button class="btn btn--loss" id="btnBattleLossClassic">Niederlage</button>
+        <button class="btn btn--victory" id="btnBattleWinClassic">Sieg</button>
+      </div>
+    </div>
+
+    <!-- ===== Tablet-optimierter Kampf-Detail-Screen (app.options.tabletMode === true) ===== -->
+    <div id="combatTabletView" hidden>
+      <div class="tablet-orientation-hint">Für die beste Ansicht das Tablet ins Querformat drehen.</div>
+
+      <div class="tablet-stage" id="tabletStage">
+        <div class="tablet-col tablet-col--feste">
+          <div class="tablet-fight-title">
+            <div class="tablet-fight-title__feste">Feste der Letzten Ruhe</div>
+          </div>
+          <div class="hp-counter hp-counter--feste" id="hpFeste">
+            <button class="hp-counter__btn" id="btnFestePlus" aria-label="Feste +1">+</button>
+            <span class="hp-counter__value" id="hpFesteValue">30</span>
+            <button class="hp-counter__btn" id="btnFesteMinus" aria-label="Feste −1">−</button>
+          </div>
+        </div>
+
+        <div class="tablet-col tablet-col--center">
+          <div class="tablet-center">
+            <div class="tablet-active-wrap">
+              <button class="tablet-active-card" id="tabletActiveCard" title="Zug beenden &amp; nächste Karte (Leertaste)"></button>
+            </div>
+
+            <div id="tabletPeekSlot"></div>
+
+            <div class="tablet-deck-discard-row">
+              <div class="tablet-deck-discard-col">
+                <div class="tord-deckstack" id="tabletDeckStack" title="Deck aufdecken &amp; Reihenfolge anpassen"></div>
+              </div>
+              <div class="tablet-deck-discard-col">
+                <div class="tord-discard-slot" id="tabletDiscardSlot" title="Ablagestapel &amp; Sonderfunktionen"></div>
+              </div>
+            </div>
+
+            <div class="tablet-center__utility">
+              <button class="btn btn--ghost btn--small" id="btnTabletPeek">Nächste Karte einsehen</button>
+            </div>
+
+            <div class="tablet-center__actions">
+              <button class="btn btn--ghost" id="btnBattleBackOverview">Zurück</button>
+              <button class="btn btn--loss" id="btnBattleLoss">Niederlage</button>
+              <button class="btn btn--victory" id="btnBattleWin">Sieg</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tablet-col tablet-col--erzfeind">
+          <div class="hp-counter hp-counter--erzfeind" id="hpErzfeind">
+            <button class="hp-counter__btn" id="btnErzfeindMinus" aria-label="Erzfeind −1">−</button>
+            <span class="hp-counter__value" id="hpErzfeindValue">0</span>
+            <button class="hp-counter__btn" id="btnErzfeindPlus" aria-label="Erzfeind +1">+</button>
+          </div>
+          <div class="tablet-fight-title">
+            <div class="tablet-fight-title__nemesis" id="tabletNemesisName"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Deck-Overlay: "Aufgedecktes Deck" (Drag & Drop), aus dem Hauptscreen ausgelagert. -->
+  <div class="tablet-overlay" id="overlayDeck" hidden>
+    <div class="panel tablet-overlay__panel">
+      <div class="tablet-overlay__head">
+        <div class="panel__title" style="margin-bottom:0;">Aufgedecktes Deck <span style="color:var(--parchment-dim); font-weight:400; font-size:0.85rem;">(Reihenfolge per Drag &amp; Drop anpassbar)</span></div>
+        <button class="tablet-overlay__close" id="btnCloseDeckOverlay" aria-label="Schließen">&times;</button>
+      </div>
+      <div class="tord-reveal-row" id="tordRevealRow"></div>
+    </div>
+  </div>
+
+  <!-- Ablage-Overlay: Ablagestapel-Verlauf + Sonderfunktionen (Karte zurückmischen). -->
+  <div class="tablet-overlay" id="overlayDiscard" hidden>
+    <div class="panel tablet-overlay__panel">
+      <div class="tablet-overlay__head">
+        <div class="panel__title" style="margin-bottom:0;">Ablagestapel</div>
+        <button class="tablet-overlay__close" id="btnCloseDiscardOverlay" aria-label="Schließen">&times;</button>
+      </div>
+      <div class="tord-history-row" id="tordHistoryRow"></div>
+
+      <div class="tord-special" style="margin-top:26px;">
+        <div class="tord-special-actions">
+          <button class="btn btn--ghost btn--small" id="btnSpecialPlayer">Spielerkarte zurückmischen</button>
+          <button class="btn btn--ghost btn--small" id="btnSpecialNemesis">Erzfeindkarte zurückmischen</button>
+        </div>
+        <div id="tordSpecialPickerRow"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== Niederlage: Unterstützung anfordern ===================== -->
+  <section class="screen" id="screen-loss-reward">
+    <h1 class="section-title">Niederlage — Unterstützung anfordern</h1>
+    <p class="section-lede section-lede--flavor" id="lossDefeatText"></p>
+    <p class="section-lede">Wähle eine Kategorie (oder "Zufall") und erhalte Unterstützung für deinen nächsten Versuch.</p>
+    <div class="panel">
+      <div class="field">
+        <span>Kategorie</span>
+        <select id="lossCategorySelect"></select>
+      </div>
+    </div>
+    <div class="panel" id="lossRewardCardArea"></div>
+    <div class="actions">
+      <button class="btn btn--ghost" id="btnLossRewardBack">Zurück</button>
+      <button class="btn btn--primary" id="btnLossRewardNext" disabled>Weiter</button>
+    </div>
+  </section>
+
+  <!-- ===================== Niederlage: Marktplatz ausgleichen ===================== -->
+  <section class="screen" id="screen-loss-banish">
+    <h1 class="section-title">Niederlage — Marktplatz ausgleichen</h1>
+    <p class="section-lede" id="lossBanishHint"></p>
+    <div class="panel" id="lossBanishGrid"></div>
+    <div class="actions actions--end">
+      <button class="btn btn--ghost" id="btnLossBanishBack">Niederlage zurücknehmen</button>
+      <button class="btn btn--primary" id="btnConfirmLossBanish">Bestätigen</button>
+    </div>
+  </section>
+
+  <!-- ===================== Sieg: Marktplatz ausgleichen + Schatzauswahl =====================
+       Neue Zauber/Kristall/Artefakt-Karten tragen das "NEU"-Label (siehe renderWinBanish()); nur
+       die Schätze haben noch einen eigenen Aufdeck-Schritt (siehe winTreasureGrid).
+       Vorgeschichte/Archiv: archive/win-reward-screen.html -->
+  <section class="screen" id="screen-win-banish">
+    <h1 class="section-title">Sieg — Konfiguration Marktplatz &amp; Schätze</h1>
+    <p class="section-lede">Wähle genau 1 Karte je Typ (Zauber, Kristall, Artefakt), die aus dem aktiven Marktplatz in die Kaserne übergeben werden soll – entweder eine bestehende oder die neu gezogene. Es bleiben stets 4 Zauber, 3 Kristalle, 2 Artefakte aktiv.</p>
+    <div class="panel" id="winBanishGrid"></div>
+    <div class="panel" id="winTreasureGrid" hidden></div>
+    <p class="pool-summary" id="winBanishHint"></p>
+    <div class="actions actions--end">
+      <button class="btn btn--ghost" id="btnWinBanishBack">Sieg zurücknehmen</button>
+      <button class="btn btn--primary" id="btnConfirmWinBanish">Bestätigen</button>
+    </div>
+  </section>
+
+  <!-- ===================== Siegesseite (nur nach dem 4. Kampf) ===================== -->
+  <section class="screen" id="screen-victory">
+    <div class="victory-hero">
+      <p class="victory-hero__kicker">Die Feste der Letzten Ruhe ist gerettet</p>
+      <h1 class="victory-hero__title">Expedition vollendet</h1>
+      <p class="victory-hero__score" id="victoryScore"></p>
+      <p class="victory-hero__duration" id="victoryTotalDuration"></p>
+    </div>
+
+    <div class="panel panel--achievements" id="victoryAchievementsPanel" hidden>
+      <div class="panel__title">Meilensteine dieser Expedition</div>
+      <div class="badge-grid badge-grid--expedition" id="victoryAchievementsGrid"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">Eure Gruppe</div>
+      <div class="chipgrid" id="victoryPartyChips"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__title">Bezwungene Erzfeinde</div>
+      <div class="chipgrid" id="victoryNemesisTiles"></div>
+    </div>
+
+    <div class="panel" id="victoryEpiloguePanel" hidden>
+      <div class="chapter__eyebrow">Epilog</div>
+      <h2 class="chapter__title" id="victoryEpilogueTitle"></h2>
+      <div class="chapter__body" id="victoryEpilogueBody"></div>
+    </div>
+
+    <div class="actions actions--end">
+      <button class="btn btn--ghost" id="btnVictoryHome">Zur Startseite</button>
+      <button class="btn btn--primary" id="btnVictoryNewExpedition">Neue Expedition starten</button>
+    </div>
+  </section>
+
+  <div class="confetti" id="victoryConfetti" aria-hidden="true"></div>
+
+  <!-- ===================== Game-Over-Screen (finale Niederlage) ===================== -->
+  <!-- Nur erreichbar über finalizeLoss(), wenn Option "Finale Niederlage nach 3 verlorenen
+       Kämpfen" aktiv ist und die 3. Niederlage in Folge gegen denselben Erzfeind eintritt —
+       kein eigener Navigationseinstieg (keine goto('game-over')-Aufrufe außerhalb davon). -->
+  <section class="screen" id="screen-game-over">
+    <div class="game-over-hero">
+      <img class="game-over-hero__icon" src="icons/svg/nemesis.svg" alt="" aria-hidden="true">
+      <h1 class="game-over-hero__title">Finale Niederlage</h1>
+      <p class="game-over-hero__text" id="gameOverText"></p>
+    </div>
+
+    <div class="panel panel--achievements" id="gameOverAchievementsPanel" hidden>
+      <div class="panel__title">Meilensteine dieser Expedition</div>
+      <div class="badge-grid badge-grid--expedition" id="gameOverAchievementsGrid"></div>
+    </div>
+
+    <div class="actions actions--end">
+      <button class="btn btn--ghost" id="btnGameOverHome">Zur Startseite</button>
+      <button class="btn btn--loss" id="btnGameOverNewExpedition">Neue Expedition starten</button>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast" hidden></div>
+
+<!-- Soundeffekte laufen seit dem Umstieg auf die Web Audio API nicht mehr über <audio>-Elemente
+     im DOM, sondern werden in app.js (SFX_FILES / NEMESIS_SFX_FILES / preloadAllSfx) geladen und
+     als AudioBuffer gecacht. Grund: iOS Safari musste bei <audio>.play() den Decoder jedes Mal neu
+     anstoßen, was auf dem iPad zu spürbarer Verzögerung führte. -->
+
+<script src="data.js?v=20260925-2"></script>
+<script src="plan.js?v=20260925-2"></script>
+<script src="achievements.js?v=20261006-2"></script>
+<script src="treasure-icons.js?v=20261007-1"></script>
+<script src="app.js?v=20261008-1"></script>
+</body>
+</html>

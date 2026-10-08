@@ -1,0 +1,123 @@
+<!--
+  ARCHIV: screen-win-reward ("Sieg — Beute")
+  ============================================================================
+  Ausgebaut am 2026-09-26 (Nutzerwunsch): Der separate Beute-Reveal-Screen nach
+  einem Sieg entfällt. Der Grund: die neuen Marktplatzkarten (Zauber/Kristall/
+  Artefakt) werden ab jetzt direkt mit "NEU"-Label auf dem Marktplatz-
+  Konfigurations-Screen (screen-win-banish) angezeigt, ohne eigenen Reveal-
+  Schritt. NUR das Schätze-Reveal-Feature (gestaffeltes Aufdecken per Button,
+  loot.mp3, Flip-Card-Animation) wurde nach screen-win-banish übernommen — die
+  eigentliche Auswahl-Logik der Schätze lag ohnehin schon dort.
+
+  Dieses Fragment ist eine reine Referenz/Doku, KEIN aktiver Code mehr. Enthält:
+  1. Das ursprüngliche HTML-Markup von screen-win-reward (index.html)
+  2. Die zugehörige renderWinReward()-Funktion + flipCardHtml() (app.js)
+  3. Die alte routeAfterLoad()-Guard-Logik, die zwischen win-reward/win-banish
+     unterschied
+  4. Die alten Event-Listener (btnWinRewardBack -> undoWinReward,
+     btnWinRewardNext -> goto('win-banish'))
+
+  Falls der separate Beute-Screen jemals wiederhergestellt werden soll: dieses
+  Fragment als Ausgangspunkt nehmen, WIN_REWARD_REVEAL_STAGGER_MS und
+  flipCardHtml() existieren in app.js weiterhin (werden für die Schätze-
+  Reveal-Gruppe auf screen-win-banish weiterverwendet).
+  ============================================================================
+-->
+
+<!-- ===================== 1. HTML-Markup (aus index.html) ===================== -->
+<section class="screen" id="screen-win-reward">
+  <h1 class="section-title">Sieg — Beute</h1>
+  <div class="panel" id="winRewardGrid"></div>
+  <div class="panel" id="winRewardTreasurePreview" hidden></div>
+  <div class="panel" id="winRewardEpiloguePanel" hidden>
+    <div class="chapter__eyebrow">Epilog</div>
+    <h2 class="chapter__title" id="winRewardEpilogueTitle"></h2>
+    <div class="chapter__body" id="winRewardEpilogueBody"></div>
+  </div>
+  <div class="actions">
+    <button class="btn btn--ghost" id="btnWinRewardBack">Zurück</button>
+    <button class="btn btn--primary" id="btnWinRewardNext">Weiter</button>
+  </div>
+</section>
+
+<!--
+===================== 2. JS-Logik (aus app.js, Referenz) =====================
+
+function flipCardHtml(frontHtml, accentStyle, revealed, delayIndex, storyRelevant, sizeVariant, isMage) {
+  const delay = revealed ? ` style="transition-delay:${delayIndex * WIN_REWARD_REVEAL_STAGGER_MS}ms"` : '';
+  const frontClass = `flipcard__face flipcard__face--front card${isMage ? ' card--mage' : ''}${sizeVariant ? ` card--${sizeVariant}` : ''}${storyRelevant ? ' card--story-relevant' : ''}`;
+  return `<div class="flipcard${revealed ? ' flipcard--revealed' : ''}${sizeVariant ? ` flipcard--${sizeVariant}` : ''}">
+    <div class="flipcard__inner"${delay}>
+      ${flipCardBackHtml()}
+      <div class="${frontClass}" style="${accentStyle}">${frontHtml}</div>
+    </div>
+  </div>`;
+}
+
+function renderWinReward() {
+  if (!app.runtime.pendingWinRewardReveal) app.runtime.pendingWinRewardReveal = { market: false, treasure: false };
+  const reveal = app.runtime.pendingWinRewardReveal;
+
+  const r = app.runtime.pendingWinRewards;
+  const order = ['Zauber', 'Kristall', 'Relic'];
+  const marketRevealed = reveal.market;
+  const rewardCardsHtml = order.map((s, i) => {
+    const c = r[s];
+    if (!c) return `<div class="chip">(kein Nachschub für ${categoryLabel(s)})</div>`;
+    return flipCardHtml(marketplaceCardChipHtml(c), cardAccentStyle(c.subtype), marketRevealed, i, false, 'slim');
+  }).join('');
+  const marketRevealBtn = marketRevealed ? '' : `<button class="btn btn--primary btn--small" id="btnRevealWinRewardMarket">Beute aufdecken</button>`;
+  el('winRewardGrid').innerHTML = `
+    <h3 class="group-label">Beute</h3>
+    <div class="actions actions--start">${marketRevealBtn}</div>
+    <div class="chipgrid market-grid">${rewardCardsHtml}</div>`;
+  const btnRevealMarket = el('btnRevealWinRewardMarket');
+  if (btnRevealMarket) btnRevealMarket.addEventListener('click', revealWinRewardMarket);
+
+  const award = app.runtime.pendingTreasureAward;
+  const treasurePreview = el('winRewardTreasurePreview');
+  if (award) {
+    treasurePreview.hidden = false;
+    const treasureRevealed = reveal.treasure;
+    const treasureCardsHtml = award.candidates.map((t, i) => flipCardHtml(treasureCardHtml(t), cardAccentStyle('schatz-' + t.level), treasureRevealed, i, t.id === award.recommendedId, 'slim-treasure')).join('');
+    const treasureRevealBtn = treasureRevealed ? '' : `<button class="btn btn--primary btn--small" id="btnRevealWinRewardTreasure">Schätze aufdecken</button>`;
+    treasurePreview.innerHTML = `
+      <h3 class="group-label">Schätze Stufe ${romanTier(award.tier)}</h3>
+      <div class="actions actions--start">${treasureRevealBtn}</div>
+      <div class="chipgrid market-grid">${treasureCardsHtml}</div>`;
+    const btnRevealTreasure = el('btnRevealWinRewardTreasure');
+    if (btnRevealTreasure) btnRevealTreasure.addEventListener('click', revealWinRewardTreasure);
+  } else {
+    treasurePreview.hidden = true;
+    treasurePreview.innerHTML = '';
+  }
+
+  el('btnWinRewardNext').disabled = !reveal.market || (!!award && !reveal.treasure);
+
+  const epiloguePanel = el('winRewardEpiloguePanel');
+  const epilogue = (app.runtime.fightIndex === 3 && !app.runtime.storyDisabled) ? app.runtime.chapters[4] : null;
+  if (epilogue) {
+    epiloguePanel.hidden = false;
+    el('winRewardEpilogueTitle').textContent = epilogue.title || 'Epilog';
+    el('winRewardEpilogueBody').innerHTML = escapeHtml(epilogue.body).replace(/\n\n+/g, '</p><p>').replace(/^/, '<p>').replace(/$/, '</p>');
+  } else {
+    epiloguePanel.hidden = true;
+  }
+}
+
+// ---- Alte routeAfterLoad()-Guard-Logik (Reload mitten im Beute-Flow) ----
+  if (app.runtime.pendingWinRewards) {
+    const reveal = app.runtime.pendingWinRewardReveal;
+    const award = app.runtime.pendingTreasureAward;
+    const bothRevealed = reveal && reveal.market && (!award || reveal.treasure);
+    goto(bothRevealed ? 'win-banish' : 'win-reward');
+    return;
+  }
+
+// ---- Alte Event-Listener ----
+el('btnWinRewardBack').addEventListener('click', undoWinReward);
+el('btnWinRewardNext').addEventListener('click', () => { playSfx('navigation_forward'); goto('win-banish'); });
+
+// ---- goto()-Switch-Case ----
+case 'win-reward': show('screen-win-reward'); renderWinReward(); break;
+-->

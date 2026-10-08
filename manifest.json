@@ -1,0 +1,14 @@
+{
+  "name": "Aeon's End — Chronik der Feste",
+  "short_name": "Aeon's End",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0e0d14",
+  "theme_color": "#0e0d14",
+  "orientation": "any",
+  "icons": [
+    { "src": "icons/aether-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/aether-icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

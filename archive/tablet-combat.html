@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Kampf-Detail — Tablet (Test)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Bindet exakt dasselbe Stylesheet wie die restliche App ein (:root-Tokens, .btn, .panel,
+     .tord-*, .turn-card, …). Dadurch entsteht KEINE Duplizierung der bestehenden Design-Bausteine
+     — hier kommen nur neue, tablet-spezifische Klassen hinzu (Präfix "tablet-" bzw. neue
+     .hp-counter-/.tord-deckstack-/.tablet-overlay-Klassen für Dinge, die es so noch nicht gibt). -->
+<link rel="stylesheet" href="../styles.css">
+<style>
+  /* ================================================================================================
+     tablet-combat.html — eigenständiger Test-Screen für den tablet-optimierten Kampf-Detail-Screen
+     ------------------------------------------------------------------------------------------------
+     Nutzer-Vorgabe: separat entwickeln/testen, BEVOR (und ohne dass) der bestehende Kampf-Screen
+     (#screen-battle in index.html/app.js) verändert wird. Diese Datei rührt weder index.html noch
+     app.js noch styles.css an.
+
+     Wiederverwendung bestehender Logik:
+       - data.js + plan.js werden unverändert per <script src> eingebunden (beide Dateien haben
+         keine DOM-Abhängigkeiten, siehe Grep-Ergebnis — unbedenklich einzubinden).
+       - Die Reihenfolge-Randomizer-Kernlogik (TORD_*, advanceTurnOrder() usw.) ist unten 1:1 aus
+         app.js übernommen (Zeilen ~2024-2470 dort), weil app.js selbst NICHT sicher per <script src>
+         eingebunden werden kann: sein unterer Abschnitt führt ungeschützte el('...')-Aufrufe gegen
+         index.html-spezifische IDs aus und würde hier sofort einen Fehler werfen. Die Funktionen
+         bleiben bewusst gleich benannt und verhaltensgleich, damit ein späteres Zusammenführen in
+         #screen-battle (analog zum bereits erfolgten Merge von turn-order-randomizer-prototype.html)
+         reibungslos möglich ist.
+       - Persistenz: Diese Testdatei LIEST optional den zuletzt gespeicherten echten Spielstand
+         (chronikDerFeste_v2_slots), schreibt aber NIE in diesen Schlüssel zurück — so kann hier
+         gefahrlos experimentiert werden, ohne einen echten Spielstand zu gefährden. Eigene
+         Testzustände (Tablet-Modus-Schalter, Demo-Kampf, Feste-/Erzfeind-Zähler) landen in eigenen,
+         neuen localStorage-Schlüsseln (siehe TABLET_MODE_KEY / TABLET_DEMO_KEY unten).
+     ================================================================================================ */
+
+  /* ---------- Grundgerüst / Modusleiste (nur in dieser Testdatei sichtbar) ---------- */
+  body { overflow-x: hidden; }
+  .tablet-modebar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--deep);
+  }
+  .tablet-modebar__hint {
+    font-family: var(--serif-body);
+    color: var(--parchment-dim);
+    font-size: 0.88rem;
+  }
+  .tablet-modebar__note {
+    margin-left: auto;
+    font-family: var(--sans);
+    font-size: 0.78rem;
+    color: var(--parchment-dim);
+    opacity: 0.8;
+  }
+
+  /* Toggle-Switch-Komponente — gibt es in der App noch nicht (nur Checkboxen), daher hier neu
+     gebaut, aber mit denselben Farbtokens wie der Rest der App (--aetherium für "aktiv"). */
+  .tablet-toggle { display: inline-flex; align-items: center; gap: 12px; cursor: pointer; font-family: var(--sans); color: var(--parchment); user-select: none; }
+  .tablet-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .tablet-toggle__track {
+    width: 52px; height: 28px; border-radius: 999px;
+    background: var(--deep-2); border: 1px solid var(--line);
+    position: relative; transition: background 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+  }
+  .tablet-toggle__thumb {
+    position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--parchment-dim); transition: transform 0.2s, background 0.2s;
+  }
+  .tablet-toggle input:checked + .tablet-toggle__track { background: var(--aetherium-dim); border-color: var(--aetherium); }
+  .tablet-toggle input:checked + .tablet-toggle__track .tablet-toggle__thumb { transform: translateX(24px); background: var(--aetherium); }
+  .tablet-toggle__label { font-size: 0.98rem; font-weight: 500; }
+
+  .tablet-fallback {
+    max-width: 640px;
+    margin: 60px auto;
+    padding: 0 24px;
+    text-align: center;
+  }
+  .tablet-fallback p { font-family: var(--serif-body); color: var(--parchment-dim); line-height: 1.6; }
+
+  /* ---------- Haupt-Stage ----------
+     Basis (Portrait, ungedreht): einfacher, funktionaler Stapel von oben nach unten
+     (Feste-Zähler → Zentrum → Erzfeind-Zähler → Nav). Das ist bewusst noch NICHT die
+     Ziel-Ansicht — sie entsteht erst, wenn das Tablet tatsächlich ins Querformat gedreht wird
+     (siehe @media (orientation: landscape) unten). So bleibt die App auch ungedreht benutzbar,
+     ohne dass das Layout von vornherein "als ob gedreht" aussieht. */
+  .tablet-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 18px;
+    min-height: calc(100vh - 64px);
+  }
+  .tablet-stage[hidden] { display: none; }
+  .tablet-col { display: flex; flex-direction: column; min-height: 0; }
+  .tablet-col--feste, .tablet-col--erzfeind { flex: none; }
+
+  /* Ziel-Layout: 3 Spalten (Feste | Reihenfolge-Zentrum | Erzfeind inkl. Kampf-Titel-Streifen) —
+     greift erst, sobald das Gerät (bzw. der Browser) tatsächlich Querformat meldet. Die eigene
+     Nav-Spalte entfällt: der Erzfeind-Counter rutscht dadurch ganz an den rechten Bildschirmrand,
+     der Kampf-Titel wandert als rotierter Streifen direkt neben den Counter, die CTAs (Zurück/
+     Niederlage/Sieg) wandern ins Zentrum unter Deck/Ablage. */
+  @media (orientation: landscape) {
+    .tablet-stage {
+      display: grid;
+      grid-template-columns: minmax(210px, 260px) 1fr minmax(210px, 260px);
+      gap: 22px;
+      padding: 22px;
+      height: calc(100vh - 64px);
+      min-height: 560px;
+      align-items: stretch;
+    }
+    .tablet-col--feste, .tablet-col--erzfeind { flex: 1; }
+  }
+
+  @media (orientation: portrait) {
+    .tablet-orientation-hint { display: flex; }
+  }
+  .tablet-orientation-hint {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 20px;
+    background: color-mix(in srgb, var(--ember) 18%, var(--void));
+    border-bottom: 1px solid var(--ember);
+    font-family: var(--sans);
+    font-size: 0.88rem;
+    color: var(--parchment);
+  }
+
+  /* ---------- HP-Zähler (Feste / Erzfeind) ----------
+     Aufbau (von oben nach unten, für beide Zähler identisch): + Button → Zahl → − Button.
+     Bewusst als einfacher vertikaler Stapel, ohne Textbezeichnung (Feste/Erzfeind sind über
+     die Position links/rechts sowie die Farbe erkennbar).
+     Basis (Portrait, ungedreht): Zahl unrotiert. Bewusst KEINE Rotation hier, damit der
+     Screen auch ungedreht benutzbar ist und nicht von vornherein "wie gedreht" aussieht.
+     Erst in @media (orientation: landscape) unten (= Tablet wurde tatsächlich gedreht) kippt
+     die Zahl gegengleich um 90° (Feste gegen den Uhrzeigersinn, Erzfeind mit dem
+     Uhrzeigersinn), sodass sich Feste und Erzfeind einander gegenüberliegen. Die ±Buttons
+     bleiben in beiden Zuständen unrotiert. */
+  .hp-counter {
+    --hp-color: var(--breach);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 18px 14px;
+    border-radius: 28px;
+    border: 2px solid var(--hp-color);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--hp-color) 16%, var(--deep)), var(--void) 78%);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--hp-color) 45%, transparent),
+      0 22px 44px -22px rgba(0,0,0,0.75),
+      inset 0 0 34px -10px color-mix(in srgb, var(--hp-color) 40%, transparent);
+  }
+  .hp-counter--erzfeind { --hp-color: var(--ember); }
+  .hp-counter__btn {
+    width: min(68px, 13vh);
+    height: min(68px, 13vh);
+    border-radius: 50%;
+    border: 3px solid color-mix(in srgb, var(--hp-color) 65%, var(--parchment) 12%);
+    background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--hp-color) 32%, var(--deep-2)), var(--void) 82%);
+    color: var(--parchment);
+    font-family: var(--serif-display);
+    font-size: 2rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.15s;
+    flex-shrink: 0;
+    touch-action: manipulation;
+  }
+  .hp-counter__btn:hover:not(:disabled) { filter: brightness(1.22); }
+  .hp-counter__btn:active:not(:disabled) { transform: scale(0.94); }
+  .hp-counter__btn:disabled { opacity: 0.32; cursor: not-allowed; filter: none; }
+  .hp-counter__value {
+    font-family: var(--serif-display);
+    font-size: min(3.2rem, 7vh);
+    font-weight: 700;
+    color: var(--parchment);
+    background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--hp-color) 48%, transparent), transparent 74%);
+    border-radius: 50%;
+    width: min(120px, 22vh);
+    height: min(120px, 22vh);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--hp-color) 72%, transparent),
+      0 0 30px -4px color-mix(in srgb, var(--hp-color) 68%, transparent);
+    flex-shrink: 0;
+    transform-origin: center;
+  }
+
+  /* Ziel-Zustand: Tablet ist tatsächlich gedreht (Querformat). Erst hier rotiert die Zahl,
+     sodass sich Feste (links) und Erzfeind (rechts) einander zugewandt gegenüberliegen. */
+  @media (orientation: landscape) {
+    .hp-counter { flex: 1; padding: 22px 8px; gap: 18px; }
+    /* Feste (linker Bildschirmrand): Zahl 90° gegen den Uhrzeigersinn */
+    .hp-counter--feste .hp-counter__value { transform: rotate(-90deg); }
+    /* Erzfeind (rechter Bildschirmrand): Zahl 90° mit dem Uhrzeigersinn — gespiegelt */
+    .hp-counter--erzfeind .hp-counter__value { transform: rotate(90deg); }
+  }
+
+  /* ---------- Zentrum: Reihenfolge-Bühne ----------
+     Zielgerät: Standard-iPad 10.9" im Querformat (~1180×820pt Viewport). gap als clamp() statt
+     fixem px-Wert — auf dem Zielgerät wirkt es wie 28px (großzügig), dient aber zugleich als
+     Sicherheitsnetz, falls die Safari-UI (Adressleiste) etwas Höhe wegnimmt. Das eigentliche
+     "kein Scrollen"-Versprechen im Querformat trägt primär die aktive Karte weiter unten
+     (flex:1 statt fixer vh-Schätzung), nicht diese Notbremse hier. */
+  .tablet-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(14px, 3vh, 28px);
+    min-height: 0;
+    height: 100%;
+  }
+  /* flex:1 + min-height:0, statt fixer vh-Schätzung für die Kartengröße: die Karte füllt exakt
+     den im Zentrum tatsächlich übrigen Platz (nach Deck/Ablage-Reihe, CTAs), egal wie viel das
+     auf dem Standard-iPad 10.9" konkret ist — kein zu klein geratenes "Sicherheitspolster" wie
+     bei einer festen vh-Zahl nötig. */
+  .tablet-active-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    /* Container Query statt vh/vw-Schätzung: die gedrehte Karte (siehe .tablet-active-card
+       .turn-card) muss ihre Zielgröße aus der TATSÄCHLICHEN Größe genau dieses Wraps ableiten
+       (der nach Wegfall der Status-Zeile mehr Höhe UND — als 1fr-Spalte — reichlich Breite hat),
+       nicht aus dem gesamten Viewport. container-type: size macht Breite/Höhe dieses Wraps über
+       cqw/cqh im Kind abfragbar. */
+    container-type: size;
+    container-name: tablet-active;
+  }
+  .tablet-active-card {
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 0;
+    touch-action: manipulation;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+  }
+  /* Karte liegend statt stehend: 90°-Drehung nutzt die (nach Wegfall der Status-Zeile) gewonnene
+     Höhe UND die volle Breite der Zentrumsspalte, statt wie bisher stehend nur einen schmalen
+     vw-Streifen auszufüllen. Größenermittlung über Container-Query-Einheiten (cqw/cqh) bezogen
+     auf .tablet-active-wrap (siehe container-type dort) statt vh/vw bezogen auf den ganzen
+     Viewport — damit reagiert die Karte korrekt auf den tatsächlich übrigen Platz in DIESEM
+     Wrap, nicht auf Zufallsgrößen wie Safari-Adressleiste o.ä. Nach der 90°-Drehung wird aus der
+     UNGEDREHTEN Breite die SICHTBARE Höhe (daher an cqh gekoppelt) und aus der UNGEDREHTEN Höhe
+     die SICHTBARE Breite (daher an cqw gekoppelt) — die kleinere der beiden Grenzen entscheidet,
+     aspect-ratio hält die Proportion. */
+  .tablet-active-card .turn-card {
+    width: min(94cqh, 620px);
+    height: auto;
+    max-height: min(94cqw, 600px);
+    aspect-ratio: 300 / 420;
+    transform: rotate(90deg);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .tablet-active-card:active .turn-card { transform: rotate(90deg) scale(0.97); }
+  /* NEU, existiert nicht in styles.css (nur hier definiert) — beim Merge in #screen-battle
+     muss diese Regel mit übernommen werden, sonst fehlt die "neue Karte"-Animation. */
+  .turn-card--justdrawn { animation: tablet-card-flash 0.6s ease-out; }
+  @keyframes tablet-card-flash {
+    0% { filter: brightness(2.1); box-shadow: 0 0 0 4px rgba(255,255,255,0.55), 0 0 46px -4px rgba(255,255,255,0.5); }
+    100% { filter: brightness(1); }
+  }
+
+  .tablet-deck-discard-row {
+    display: flex;
+    align-items: center;
+    gap: 56px;
+  }
+  .tablet-deck-discard-col { display: flex; flex-direction: column; align-items: center; }
+
+  /* Deck als Kartenstapel mit minimalistischer digitaler Rückseite (Referenz: turn_order_deck/back.jpg,
+     drei gestapelte Wörter "REIHEN / FOLGE / DECK" in einem ovalen Rahmen — hier nachgebaut mit den
+     App-eigenen Farbtokens statt des gemalten Artworks, da kein separates Icon-Asset existiert).
+     Ablagestapel (.tord-discard-slot .turn-card) wird bewusst auf dieselbe Größe gesetzt (--tc-w/--tc-h),
+     damit beide Stapel gleich groß wirken. */
+  .tord-deckstack {
+    position: relative;
+    width: var(--tc-w, 150px);
+    height: var(--tc-h, 210px);
+    cursor: pointer;
+    touch-action: manipulation;
+    --tc-w: 150px; --tc-h: 210px;
+  }
+  .tord-deckstack__layer {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    background: linear-gradient(160deg, #23213a, #14131f 70%);
+    border: 1px solid var(--line);
+    box-shadow: 0 10px 26px -12px rgba(0,0,0,0.6);
+  }
+  .tord-deckstack__layer:nth-child(1) { transform: translate(7px, 7px); }
+  .tord-deckstack__layer:nth-child(2) { transform: translate(3.5px, 3.5px); }
+  .tord-deckstack__layer:nth-child(3) {
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.1s;
+  }
+  .tord-deckstack:active .tord-deckstack__layer:nth-child(3) { transform: scale(0.97); }
+  .tord-deckback-oval {
+    width: 74%; height: 60%;
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, var(--parchment) 55%, transparent);
+    background: rgba(255,255,255,0.03);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px;
+  }
+  .tord-deckback-oval span {
+    font-family: var(--serif-display);
+    letter-spacing: 0.14em;
+    color: color-mix(in srgb, var(--parchment) 72%, transparent);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+  }
+  .tord-deckstack__count {
+    position: absolute;
+    bottom: -10px;
+    right: -14px;
+    background: var(--deep-2);
+    border: 1px solid var(--line);
+    color: var(--parchment);
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    padding: 3px 9px;
+    border-radius: 999px;
+    z-index: 2;
+  }
+
+  .tord-discard-slot { cursor: pointer; touch-action: manipulation; }
+  .tord-discard-slot .turn-card { --tc-w: 150px; --tc-h: 210px; }
+
+  .tablet-center__utility { display: flex; gap: 14px; margin-top: 4px; }
+
+  /* Peek: Inline-Box statt Popover, reduziert Layout-Risiko; nutzt bestehende .tord-peek-Optik 1:1. */
+  #tabletPeekSlot:not(:empty) { margin-top: -4px; }
+
+  /* ---------- Feste-/Erzfeind-Spalte: Counter + rotierter Titel-Streifen ----------
+     Basis (Portrait): Titel liegt unrotiert neben/unter dem Counter (einfacher, lesbarer Stapel).
+     Erst im Querformat (siehe @media unten) wird daraus ein schmaler Streifen AN DER
+     BILDSCHIRM-AUSSENSEITE (links bei Feste, rechts bei Erzfeind), Text um 90° gedreht
+     (Feste gegen den Uhrzeigersinn, Erzfeind mit dem Uhrzeigersinn — analog zur Zahlen-Rotation
+     in den jeweiligen Countern), einzeilig (kein Umbruch) und entlang der langen (vertikalen)
+     Seite zentriert. Die Reihenfolge im Markup entscheidet über links/rechts: bei Feste steht
+     der Titel VOR dem Counter (→ landet außen links), bei Erzfeind NACH dem Counter (→ landet
+     außen rechts). */
+  .tablet-col--feste, .tablet-col--erzfeind {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .tablet-fight-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 4px;
+  }
+  .tablet-fight-title__nemesis, .tablet-fight-title__feste {
+    font-family: var(--serif-display);
+    font-size: 1.2rem;
+    line-height: 1.2;
+    color: var(--parchment);
+    text-align: center;
+  }
+
+  @media (orientation: landscape) {
+    .tablet-col--feste, .tablet-col--erzfeind {
+      flex-direction: row;
+      align-items: stretch;
+      justify-content: center;
+      gap: 6px;
+    }
+    .tablet-fight-title {
+      flex: none;
+      width: 46px;
+      overflow: hidden;
+      padding: 0;
+    }
+    .tablet-fight-title__nemesis {
+      width: min(420px, 90vh);
+      white-space: nowrap;
+      transform: rotate(90deg);
+    }
+    .tablet-fight-title__feste {
+      width: min(420px, 90vh);
+      white-space: nowrap;
+      transform: rotate(-90deg);
+    }
+  }
+
+  /* ---------- CTAs (Zurück / Niederlage / Sieg) — unten im Zentrum, unter Deck/Ablage ---------- */
+  .tablet-center__actions {
+    display: flex;
+    gap: 14px;
+    margin-top: 6px;
+  }
+  .tablet-center__actions .btn {
+    min-height: 52px;
+    font-size: 0.94rem;
+    padding: 12px 18px;
+  }
+
+  /* ---------- Overlays (Deck aufdecken / Ablagestapel + Sonderfunktionen) ----------
+     Hintergrund bewusst blickdicht (var(--void), kein rgba/Transparenz mehr) — die Fläche
+     dahinter darf nicht durchscheinen. Scroll-Lock der Seite dahinter: siehe .tablet-scroll-lock
+     auf <body>, wird per JS beim Öffnen/Schließen der Overlays gesetzt/entfernt. */
+  .tablet-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--void);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 60;
+    overflow-y: auto;
+  }
+  .tablet-overlay[hidden] { display: none; }
+  .tablet-overlay__panel {
+    width: 100%;
+    max-width: min(920px, 94vw);
+    max-height: 88vh;
+    overflow-y: auto;
+    margin: 0;
+  }
+  .tablet-overlay__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .tablet-overlay__close {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--deep-2);
+    color: var(--parchment);
+    font-size: 1.4rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .tablet-overlay__close:hover { filter: brightness(1.25); }
+  .tablet-overlay__close:active { transform: scale(0.94); }
+
+  /* Scroll-Lock: solange ein Overlay offen ist, bekommt <body> diese Klasse — die Seite
+     dahinter kann dann nicht mehr scrollen, während im Overlay selbst (.tablet-overlay,
+     .tablet-overlay__panel) weiterhin normal gescrollt werden kann. */
+  body.tablet-scroll-lock { overflow: hidden; height: 100vh; }
+
+  /* ---------- Test-Umgebung (entfällt bei einer künftigen Integration in #screen-battle) ---------- */
+  .tablet-marker {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    color: var(--void);
+    background: var(--tier-s);
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .tablet-testpanel { margin: 0 22px 22px; border: 1px dashed var(--aetherium-dim); }
+  .tablet-testpanel__row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+</style>
+</head>
+<body>
+
+<div class="tablet-modebar">
+  <label class="tablet-toggle">
+    <input type="checkbox" id="tabletModeToggle">
+    <span class="tablet-toggle__track"><span class="tablet-toggle__thumb"></span></span>
+    <span class="tablet-toggle__label">Tablet Modus für Kampf</span>
+  </label>
+  <span class="tablet-modebar__hint">Persistiert lokal · Default: Aus · steuert ausschließlich, welcher Kampf-Screen angezeigt wird — die restliche App-Logik bleibt unverändert.</span>
+  <span class="tablet-modebar__note" id="tabletDataSourceNote"></span>
+</div>
+
+<div class="tablet-orientation-hint">Für die beste Ansicht das Tablet ins Querformat drehen.</div>
+
+<!-- ============================================================
+     Fallback-Ansicht (Toggle = Aus): der reale bestehende Kampf-Screen bleibt in index.html/app.js
+     unverändert — diese Box demonstriert hier nur, dass bei "Aus" NICHT der Tablet-Screen erscheint.
+   ============================================================ -->
+<div class="tablet-fallback" id="tabletFallback">
+  <h1 class="section-title">Tablet-Modus ist aus</h1>
+  <p>Der normale Kampf-Detail-Screen (<code>#screen-battle</code> in <code>index.html</code>) bleibt unverändert und wird an dieser Stelle in der echten App angezeigt. Schalte oben "Tablet Modus für Kampf" ein, um den neuen, tablet-optimierten Screen hier zu sehen.</p>
+</div>
+
+<!-- ============================================================
+     Tablet-Kampf-Screen (Toggle = Ein)
+   ============================================================ -->
+<div class="tablet-stage" id="tabletStage" hidden>
+  <div class="tablet-col tablet-col--feste">
+    <div class="tablet-fight-title">
+      <div class="tablet-fight-title__feste">Feste der Letzten Ruhe</div>
+    </div>
+    <div class="hp-counter hp-counter--feste" id="hpFeste">
+      <button class="hp-counter__btn" id="btnFestePlus" aria-label="Feste +1">+</button>
+      <span class="hp-counter__value" id="hpFesteValue">30</span>
+      <button class="hp-counter__btn" id="btnFesteMinus" aria-label="Feste −1">−</button>
+    </div>
+  </div>
+
+  <div class="tablet-col tablet-col--center">
+    <div class="tablet-center">
+      <div class="tablet-active-wrap">
+        <button class="tablet-active-card" id="tabletActiveCard" title="Zug beenden &amp; nächste Karte (Leertaste)"></button>
+      </div>
+
+      <div id="tabletPeekSlot"></div>
+
+      <div class="tablet-deck-discard-row">
+        <div class="tablet-deck-discard-col">
+          <div class="tord-deckstack" id="tabletDeckStack" title="Deck aufdecken &amp; Reihenfolge anpassen">
+            <div class="tord-deckstack__layer"></div>
+            <div class="tord-deckstack__layer"></div>
+            <div class="tord-deckstack__layer">
+              <div class="tord-deckback-oval"><span>Reihen</span><span>folge</span><span>Deck</span></div>
+            </div>
+            <span class="tord-deckstack__count" id="tabletDeckCount"></span>
+          </div>
+        </div>
+        <div class="tablet-deck-discard-col">
+          <div class="tord-discard-slot" id="tabletDiscardSlot" title="Ablagestapel &amp; Sonderfunktionen"></div>
+        </div>
+      </div>
+
+      <div class="tablet-center__utility">
+        <button class="btn btn--ghost btn--small" id="btnTabletPeek">Nächste Karte einsehen</button>
+      </div>
+
+      <div class="tablet-center__actions">
+        <button class="btn btn--ghost" id="tabletBtnBack">Zurück</button>
+        <button class="btn btn--loss" id="tabletBtnLoss">Niederlage</button>
+        <button class="btn btn--victory" id="tabletBtnWin">Sieg</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tablet-col tablet-col--erzfeind">
+    <div class="hp-counter hp-counter--erzfeind" id="hpErzfeind">
+      <button class="hp-counter__btn" id="btnErzfeindMinus" aria-label="Erzfeind −1">−</button>
+      <span class="hp-counter__value" id="hpErzfeindValue">0</span>
+      <button class="hp-counter__btn" id="btnErzfeindPlus" aria-label="Erzfeind +1">+</button>
+    </div>
+    <div class="tablet-fight-title">
+      <div class="tablet-fight-title__nemesis" id="tabletNemesisName"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Deck-Overlay: exakt die bestehende "Aufgedecktes Deck"-Funktionalität (Drag&Drop + Pfeile),
+     nur in einem Overlay statt inline, damit die Hauptansicht aufgeräumt bleibt. -->
+<div class="tablet-overlay" id="overlayDeck" hidden>
+  <div class="panel tablet-overlay__panel">
+    <div class="tablet-overlay__head">
+      <div class="panel__title" style="margin-bottom:0;">Aufgedecktes Deck <span style="color:var(--parchment-dim); font-weight:400; font-size:0.85rem;">(Reihenfolge per Drag &amp; Drop anpassbar)</span></div>
+      <button class="tablet-overlay__close" id="btnCloseDeckOverlay" aria-label="Schließen">&times;</button>
+    </div>
+    <div class="tord-reveal-row" id="tordRevealRow"></div>
+  </div>
+</div>
+
+<!-- Ablage-Overlay: bestehender Ablagestapel-Verlauf + Sonderfunktionen (Karte zurückmischen). -->
+<div class="tablet-overlay" id="overlayDiscard" hidden>
+  <div class="panel tablet-overlay__panel">
+    <div class="tablet-overlay__head">
+      <div class="panel__title" style="margin-bottom:0;">Ablagestapel</div>
+      <button class="tablet-overlay__close" id="btnCloseDiscardOverlay" aria-label="Schließen">&times;</button>
+    </div>
+    <div class="tord-history-row" id="tordHistoryRow"></div>
+
+    <div class="tord-special" style="margin-top:26px;">
+      <div class="tord-special-actions">
+        <button class="btn btn--ghost btn--small" id="btnSpecialPlayer">Spielerkarte zurückmischen</button>
+        <button class="btn btn--ghost btn--small" id="btnSpecialNemesis">Erzfeindkarte zurückmischen</button>
+      </div>
+      <div id="tordSpecialPickerRow"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     Test-Umgebung — NICHT Teil eines künftigen Merges in #screen-battle. Nur hier, um die Datei
+     unabhängig von einem echten Spielstand testen zu können (Spec: "damit wir diesen separat
+     testen können").
+   ============================================================ -->
+<div class="panel tablet-testpanel">
+  <span class="tablet-marker">Nur Test-Umgebung — entfällt bei künftiger Integration</span>
+  <div class="panel__title">Test-Konfiguration</div>
+  <p class="panel__hint" id="tabletTestHint"></p>
+  <div class="tablet-testpanel__row">
+    <label>Spieleranzahl:
+      <select id="cfgPlayerCount">
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4" selected>4</option>
+        <option value="4-easy">4 (einfach)</option>
+      </select>
+    </label>
+    <button class="btn btn--ghost btn--small" id="btnDemoPrevFight">◂ Kampf zurück</button>
+    <button class="btn btn--ghost btn--small" id="btnDemoNextFight">Nächster Kampf ▸</button>
+    <button class="btn btn--ghost btn--small" id="btnDemoReset">↺ Demo zurücksetzen</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="../data.js"></script>
+<script src="../plan.js"></script>
+<script>
+/* ================================================================================================
+   TABLET-KAMPF-SCREEN — Logik
+   ================================================================================================ */
+
+const TABLET_MODE_KEY = 'chronikDerFeste_v2_tabletModeEnabled'; // neuer, eigener Schlüssel (Default: false/Aus)
+const TABLET_DEMO_KEY = 'chronikDerFeste_v2_tabletDemoState';   // eigener Testzustand, NICHT der echte SLOTS_KEY
+const SLOTS_KEY = 'chronikDerFeste_v2_slots'; // wird nur LESEND referenziert, siehe Kommentar oben im <style>-Block
+
+const el = (id) => document.getElementById(id);
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+/* ---------- Toast (analog zum bestehenden .toast-Muster) ---------- */
+let toastTimer = null;
+function showToast(msg) {
+  const t = el('toast');
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 1800);
+}
+
+/* ================================================================================================
+   Reihenfolge-Randomizer-Kernlogik — 1:1 übernommen aus app.js (Abschnitt "Reihenfolge-Randomizer
+   (Kampf-Detail)", ca. Zeile 2024-2470), damit dieselbe Regel-Logik gilt wie im bestehenden
+   Kampf-Screen. Einzige Anpassung: `app` ist hier ein lokales, minimales Objekt (siehe unten) statt
+   der echten globalen App-Instanz, und statt saveActiveSlot() wird persistTabletDemo() aufgerufen.
+   ================================================================================================ */
+
+const TORD_PLAYER_COUNT_DECKS = {
+  '2':      ['1', '1', '2', '2', 'nemesis', 'nemesis'],
+  '3':      ['1', '2', '3', 'wild', 'nemesis', 'nemesis'],
+  '4':      ['1', '2', '3', '4', 'nemesis', 'nemesis'],
+  '4-easy': ['1-2', '1-2', '3-4', '3-4', 'nemesis', 'nemesis'],
+};
+
+const TORD_CARD_META = {
+  '1':        { label: '1',      cls: 't1',      turnText: 'Spieler 1 ist an der Reihe',              isNemesis: false, sfx: 'turn_1' },
+  '2':        { label: '2',      cls: 't2',      turnText: 'Spieler 2 ist an der Reihe',              isNemesis: false, sfx: 'turn_2' },
+  '3':        { label: '3',      cls: 't3',      turnText: 'Spieler 3 ist an der Reihe',              isNemesis: false, sfx: 'turn_3' },
+  '4':        { label: '4',      cls: 't4',      turnText: 'Spieler 4 ist an der Reihe',              isNemesis: false, sfx: 'turn_4' },
+  '1-2':      { label: '1/2',    cls: 't12',     turnText: 'Spieler 1 oder 2 ist an der Reihe',       isNemesis: false, sfx: 'turn_1_2' },
+  '3-4':      { label: '3/4',    cls: 't34',     turnText: 'Spieler 3 oder 4 ist an der Reihe',       isNemesis: false, sfx: 'turn_3_4' },
+  'wild':     { label: 'Eure Wahl', cls: 'wild', turnText: 'Ein Spieler eurer Wahl ist an der Reihe', isNemesis: false, sfx: 'turn_wild' },
+  'nemesis':  { label: 'Erzfeind', cls: 'nemesis', turnText: 'Der Erzfeind ist an der Reihe',         isNemesis: true,  sfx: 'turn_nemesis' },
+  'malstrom_assault': {
+    label: 'Malstrom', cls: 'malstrom', turnText: 'Sturmangriff — Malstrom-Wiederkehrer ist an der Reihe',
+    isNemesis: true, sfx: 'turn_malstrom',
+  },
+};
+
+const TORD_SFX_FILES = {
+  // bewusst noch leer, siehe app.js — keine echten Dateien vorhanden.
+};
+function playTordSfx(sfxKey) {
+  const src = TORD_SFX_FILES[sfxKey];
+  if (!src) return;
+  try {
+    const audio = new Audio(src);
+    audio.play().catch(() => {});
+  } catch (e) { /* ignore */ }
+}
+
+/* ---------- Minimaler App-Mock ---------- */
+const app = {
+  plan: { playerCount: 4, easyMode: false, nemesisOrder: [] },
+  options: { turnOrderRules: { noTriple: true, noFirstTurn: true } },
+  runtime: { fightIndex: 0, turnOrder: null },
+  dataSource: 'demo', // 'real' | 'demo' — nur zur Anzeige im Hinweistext
+};
+
+function nemesisAt(fightIndex) {
+  const id = app.plan.nemesisOrder[fightIndex];
+  return id ? nemesisByIdPlan(id) : null;
+}
+
+function turnOrderPlayerCountKey() {
+  return app.plan.easyMode ? '4-easy' : String(app.plan.playerCount || 4);
+}
+
+function buildTurnOrderDeckList() {
+  const t = app.runtime.turnOrder;
+  const base = TORD_PLAYER_COUNT_DECKS[t.playerCountKey].slice();
+  if (t.malstromActive) {
+    const idx = base.indexOf('nemesis');
+    if (idx !== -1) base[idx] = 'malstrom_assault';
+  }
+  return base;
+}
+
+function isTurnOrderNemesisType(cardKey) {
+  const meta = TORD_CARD_META[cardKey];
+  return !!(meta && meta.isNemesis);
+}
+
+function shuffleTurnOrderFresh(arr) {
+  const copy = arr.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function shuffleTurnOrderRespectingRules(cards, { carriedStreak, isFightStart }) {
+  const rules = app.options.turnOrderRules;
+  const MAX_TRIES = 1000;
+  for (let attempt = 0; attempt < MAX_TRIES; attempt++) {
+    const candidate = shuffleTurnOrderFresh(cards);
+    if (rules.noFirstTurn && isFightStart && isTurnOrderNemesisType(candidate[0])) continue;
+    if (rules.noTriple) {
+      let streak = carriedStreak;
+      let violated = false;
+      for (const cardKey of candidate) {
+        if (isTurnOrderNemesisType(cardKey)) {
+          streak++;
+          if (streak > 2) { violated = true; break; }
+        } else {
+          streak = 0;
+        }
+      }
+      if (violated) continue;
+    }
+    return candidate;
+  }
+  return shuffleTurnOrderFresh(cards);
+}
+
+function startNewTurnOrderFight(fightIndex) {
+  const nem = nemesisAt(fightIndex);
+  const t = {
+    fightIndex,
+    playerCountKey: turnOrderPlayerCountKey(),
+    malstromActive: !!(nem && nem.id === 'MaelstromRisen'),
+    deck: [],
+    currentCycleDiscard: [],
+    currentCard: null,
+    round: 0,
+    nemesisStreak: 0,
+    isFirstDeckOfFight: true,
+    peekOpen: false,
+    revealOpen: false,
+    specialOpen: false,
+    specialPickerMode: null,
+  };
+  app.runtime.turnOrder = t;
+  t.deck = shuffleTurnOrderRespectingRules(buildTurnOrderDeckList(), { carriedStreak: 0, isFightStart: true });
+  advanceTurnOrder();
+}
+
+function ensureTurnOrderFight() {
+  const f = app.runtime.fightIndex;
+  const existing = app.runtime.turnOrder;
+  if (existing && existing.fightIndex === f) {
+    renderTurnOrder();
+    return;
+  }
+  startNewTurnOrderFight(f);
+}
+
+function advanceTurnOrder() {
+  const t = app.runtime.turnOrder;
+  const justFinishedCard = t.currentCard;
+
+  if (t.deck.length === 0) {
+    const pool = t.currentCycleDiscard.concat(justFinishedCard !== null ? [justFinishedCard] : []);
+    t.deck = shuffleTurnOrderRespectingRules(pool, {
+      carriedStreak: t.nemesisStreak,
+      isFightStart: false,
+    });
+    t.currentCycleDiscard = [];
+  } else if (justFinishedCard !== null) {
+    t.currentCycleDiscard.push(justFinishedCard);
+  }
+
+  t.currentCard = t.deck.shift();
+  t.round++;
+  t.isFirstDeckOfFight = false;
+  t.peekOpen = false;
+  t.revealOpen = false;
+  t.specialPickerMode = null;
+
+  if (isTurnOrderNemesisType(t.currentCard)) {
+    t.nemesisStreak++;
+  } else {
+    t.nemesisStreak = 0;
+  }
+
+  playTordSfx(TORD_CARD_META[t.currentCard].sfx);
+  persistTabletDemo();
+  renderTurnOrder(/* justDrawn */ true);
+}
+
+function peekNextTurnOrderCard() {
+  const t = app.runtime.turnOrder;
+  return t.deck.length > 0 ? t.deck[0] : null;
+}
+
+function toggleTurnOrderPeek() {
+  const t = app.runtime.turnOrder;
+  t.peekOpen = !t.peekOpen;
+  persistTabletDemo();
+  renderTurnOrder();
+}
+
+function moveTurnOrderRevealCard(fromIndex, toIndex) {
+  const t = app.runtime.turnOrder;
+  if (toIndex < 0 || toIndex >= t.deck.length || fromIndex === toIndex) return;
+  const [moved] = t.deck.splice(fromIndex, 1);
+  t.deck.splice(toIndex, 0, moved);
+  persistTabletDemo();
+  renderTurnOrder();
+}
+
+function isTurnOrderPlayerCardType(typeKey) {
+  return !TORD_CARD_META[typeKey].isNemesis;
+}
+function isTurnOrderGeneralNemesisType(typeKey) {
+  return typeKey === 'nemesis';
+}
+
+function distinctTurnOrderDiscardTypes(filterFn) {
+  const t = app.runtime.turnOrder;
+  const counts = new Map();
+  t.currentCycleDiscard.forEach((typeKey) => {
+    if (!filterFn(typeKey)) return;
+    counts.set(typeKey, (counts.get(typeKey) || 0) + 1);
+  });
+  return counts;
+}
+
+function setTurnOrderSpecialPickerMode(mode) {
+  const t = app.runtime.turnOrder;
+  t.specialPickerMode = t.specialPickerMode === mode ? null : mode;
+  persistTabletDemo();
+  renderTurnOrderSpecial();
+}
+
+function returnTurnOrderDiscardCardToDeck(typeKey) {
+  const t = app.runtime.turnOrder;
+  const idx = t.currentCycleDiscard.indexOf(typeKey);
+  if (idx === -1) return;
+  t.currentCycleDiscard.splice(idx, 1);
+  t.deck = shuffleTurnOrderRespectingRules(t.deck.concat([typeKey]), {
+    carriedStreak: t.nemesisStreak,
+    isFightStart: false,
+  });
+  t.specialPickerMode = null;
+  persistTabletDemo();
+  renderTurnOrder();
+  renderDiscardOverlay();
+}
+
+/* ---------- Rendering: Kartenkomponente (identisch zu turnCardEl() in app.js) ---------- */
+function turnCardEl({ typeKey, size, faceDown }) {
+  if (faceDown) {
+    return `<div class="turn-card turn-card--${size} turn-card--facedown"><div class="turn-card__oval"><span class="turn-card__label">?</span></div></div>`;
+  }
+  if (!typeKey) {
+    return `<div class="turn-card turn-card--${size} turn-card--empty"></div>`;
+  }
+  const meta = TORD_CARD_META[typeKey];
+  return `<div class="turn-card turn-card--${size} turn-card--${meta.cls}"><div class="turn-card__oval"><span class="turn-card__label">${escapeHtml(meta.label)}</span></div></div>`;
+}
+
+function renderTurnOrder(justDrawn) {
+  renderTurnOrderStage(justDrawn);
+  renderTurnOrderPeek();
+  renderDeckStack();
+  renderDiscardTop();
+  if (!el('overlayDeck').hidden) renderDeckOverlay();
+  if (!el('overlayDiscard').hidden) { renderDiscardOverlay(); renderTurnOrderSpecial(); }
+}
+
+function renderTurnOrderStage(justDrawn) {
+  const t = app.runtime.turnOrder;
+  const btn = el('tabletActiveCard');
+
+  if (t.currentCard === null) {
+    btn.innerHTML = turnCardEl({ typeKey: null, size: 'lg', faceDown: false });
+    btn.title = 'Karte tippen, um zu beginnen.';
+    return;
+  }
+
+  btn.innerHTML = turnCardEl({ typeKey: t.currentCard, size: 'lg', faceDown: false });
+  btn.title = 'Zug beenden & nächste Karte (Leertaste)';
+
+  if (justDrawn) {
+    const cardEl = btn.querySelector('.turn-card');
+    if (cardEl) {
+      cardEl.classList.add('turn-card--justdrawn');
+      setTimeout(() => cardEl.classList.remove('turn-card--justdrawn'), 650);
+    }
+  }
+}
+
+function renderTurnOrderPeek() {
+  const t = app.runtime.turnOrder;
+  const slot = el('tabletPeekSlot');
+  const btn = el('btnTabletPeek');
+  btn.textContent = t.peekOpen ? 'Vorschau schließen' : 'Nächste Karte einsehen';
+
+  if (!t.peekOpen) { slot.innerHTML = ''; return; }
+
+  const next = peekNextTurnOrderCard();
+  if (next === null) {
+    slot.innerHTML = `
+      <div class="tord-peek">
+        ${turnCardEl({ typeKey: null, size: 'sm', faceDown: false })}
+        <p class="tord-peek-text">Keine nächste Karte verfügbar — wird erst beim nächsten Zugende neu gemischt.</p>
+      </div>`;
+    return;
+  }
+  const meta = TORD_CARD_META[next];
+  slot.innerHTML = `
+    <div class="tord-peek">
+      ${turnCardEl({ typeKey: next, size: 'sm', faceDown: false })}
+      <p class="tord-peek-text">Als Nächstes: <strong>${escapeHtml(meta.label)}</strong> — ${escapeHtml(meta.turnText)}</p>
+    </div>`;
+}
+
+function renderDeckStack() {
+  const t = app.runtime.turnOrder;
+  el('tabletDeckCount').textContent = `${t.deck.length}`;
+}
+
+function renderDiscardTop() {
+  const t = app.runtime.turnOrder;
+  const slot = el('tabletDiscardSlot');
+  const top = t.currentCycleDiscard.length ? t.currentCycleDiscard[t.currentCycleDiscard.length - 1] : null;
+  slot.innerHTML = turnCardEl({ typeKey: top, size: 'sm', faceDown: false });
+}
+
+/* ---------- Overlay: Deck aufdecken / neu ordnen ---------- */
+function renderDeckOverlay() {
+  const t = app.runtime.turnOrder;
+  const row = el('tordRevealRow');
+  row.innerHTML = t.deck.map((typeKey, i) => `
+      <div class="tord-reveal-item" draggable="true" data-reveal-index="${i}">
+        <span class="tord-reveal-item__pos">${i === 0 ? 'als nächstes' : `Position ${i + 1}`}</span>
+        ${turnCardEl({ typeKey, size: 'md', faceDown: false })}
+      </div>`).join('');
+  bindDeckOverlayInteractions(row);
+}
+
+function bindDeckOverlayInteractions(row) {
+  let dragSrcIndex = null;
+  row.querySelectorAll('[data-reveal-index]').forEach((itemEl) => {
+    itemEl.addEventListener('dragstart', () => {
+      dragSrcIndex = Number(itemEl.dataset.revealIndex);
+      itemEl.classList.add('is-dragging');
+    });
+    itemEl.addEventListener('dragend', () => itemEl.classList.remove('is-dragging'));
+    itemEl.addEventListener('dragover', (e) => e.preventDefault());
+    itemEl.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const targetIndex = Number(itemEl.dataset.revealIndex);
+      if (dragSrcIndex !== null) moveTurnOrderRevealCard(dragSrcIndex, targetIndex);
+      dragSrcIndex = null;
+      if (!el('overlayDeck').hidden) renderDeckOverlay();
+    });
+  });
+}
+
+/* ---------- Overlay: Ablagestapel + Sonderfunktionen ---------- */
+function renderDiscardOverlay() {
+  const t = app.runtime.turnOrder;
+  const row = el('tordHistoryRow');
+  if (t.currentCycleDiscard.length === 0) {
+    row.innerHTML = '<span class="tord-history-empty">Noch keine Karten in dieser Runde abgelegt.</span>';
+  } else {
+    row.innerHTML = t.currentCycleDiscard.map((typeKey, i) => `
+      <div class="tord-history-item">
+        <span class="tord-history-item__idx">${i + 1}</span>
+        ${turnCardEl({ typeKey, size: 'sm', faceDown: false })}
+      </div>`).join('');
+  }
+}
+
+function renderTurnOrderSpecial() {
+  const t = app.runtime.turnOrder;
+  const playerBtn = el('btnSpecialPlayer');
+  const nemesisBtn = el('btnSpecialNemesis');
+  playerBtn.classList.toggle('is-active', t.specialPickerMode === 'player');
+  nemesisBtn.classList.toggle('is-active', t.specialPickerMode === 'nemesis');
+
+  const row = el('tordSpecialPickerRow');
+  if (t.specialPickerMode === null) { row.innerHTML = ''; return; }
+
+  const filterFn = t.specialPickerMode === 'player' ? isTurnOrderPlayerCardType : isTurnOrderGeneralNemesisType;
+  const counts = distinctTurnOrderDiscardTypes(filterFn);
+
+  if (counts.size === 0) {
+    row.innerHTML = '<p class="tord-history-empty" style="margin-top:10px;">Keine passende Karte im Ablagestapel dieser Runde.</p>';
+    return;
+  }
+
+  const items = [];
+  counts.forEach((count, typeKey) => {
+    const meta = TORD_CARD_META[typeKey];
+    items.push(`
+      <button class="tord-special-pick" type="button" data-return-type="${typeKey}" title="Zurück ins Deck mischen">
+        ${turnCardEl({ typeKey, size: 'sm', faceDown: false })}
+        <span class="tord-special-pick__label">${escapeHtml(meta.label)}${count > 1 ? ` ×${count}` : ''}</span>
+      </button>`);
+  });
+  row.innerHTML = `<div class="tord-special-picker-row">${items.join('')}</div>`;
+  row.querySelectorAll('[data-return-type]').forEach((btn) => {
+    btn.addEventListener('click', () => returnTurnOrderDiscardCardToDeck(btn.dataset.returnType));
+  });
+}
+
+/* ================================================================================================
+   Header/Nav (Erzfeind-Name, Zurück/Niederlage/Sieg)
+   ================================================================================================ */
+function renderNav() {
+  const f = app.runtime.fightIndex;
+  const nem = nemesisAt(f);
+  el('tabletNemesisName').textContent = nem ? nem.name : '—';
+}
+
+/* ================================================================================================
+   Feste-/Erzfeind-Zähler (0–99, Schritt 1, an den Grenzen deaktiviert)
+   ================================================================================================ */
+const tabletHp = { feste: 30, erzfeind: 0 };
+
+function clampHp(v) { return Math.max(0, Math.min(99, v)); }
+
+function renderHpCounters() {
+  el('hpFesteValue').textContent = String(tabletHp.feste);
+  el('hpErzfeindValue').textContent = String(tabletHp.erzfeind);
+  el('btnFesteMinus').disabled = tabletHp.feste <= 0;
+  el('btnFestePlus').disabled = tabletHp.feste >= 99;
+  el('btnErzfeindMinus').disabled = tabletHp.erzfeind <= 0;
+  el('btnErzfeindPlus').disabled = tabletHp.erzfeind >= 99;
+}
+
+function bumpHp(key, delta) {
+  tabletHp[key] = clampHp(tabletHp[key] + delta);
+  renderHpCounters();
+  persistTabletDemo();
+}
+
+/* ================================================================================================
+   Persistenz dieser Testdatei (eigener Schlüssel, siehe TABLET_DEMO_KEY oben) + optionales Lesen
+   des echten Spielstands (SLOTS_KEY) — NUR lesend, siehe Kommentar am Dateianfang.
+   ================================================================================================ */
+function persistTabletDemo() {
+  try {
+    localStorage.setItem(TABLET_DEMO_KEY, JSON.stringify({
+      plan: app.plan,
+      runtime: app.runtime,
+      hp: tabletHp,
+      dataSource: app.dataSource,
+    }));
+  } catch (e) { /* localStorage evtl. nicht verfügbar — unkritisch für einen Test-Screen */ }
+}
+
+function loadRealSlotReadOnly() {
+  try {
+    const raw = localStorage.getItem(SLOTS_KEY);
+    if (!raw) return null;
+    const slots = JSON.parse(raw);
+    if (!Array.isArray(slots) || !slots.length) return null;
+    const slot = slots[0];
+    if (!slot || !slot.plan || !slot.plan.nemesisOrder || !slot.plan.nemesisOrder.length) return null;
+    return slot;
+  } catch (e) {
+    return null;
+  }
+}
+
+function buildDemoPlan(playerCountKeySel) {
+  const easyMode = playerCountKeySel === '4-easy';
+  const playerCount = easyMode ? 4 : Number(playerCountKeySel) || 4;
+  const nemeses = (AEONS_DATA.nemeses || []).slice(0, 4);
+  return {
+    playerCount,
+    easyMode,
+    nemesisOrder: nemeses.map((n) => n.id),
+  };
+}
+
+function initAppState() {
+  const demoRaw = (() => {
+    try { return JSON.parse(localStorage.getItem(TABLET_DEMO_KEY) || 'null'); } catch (e) { return null; }
+  })();
+
+  const realSlot = loadRealSlotReadOnly();
+
+  if (demoRaw && demoRaw.plan && demoRaw.runtime) {
+    // Vorherigen Testzustand fortsetzen (kein echter Spielstand betroffen).
+    app.plan = demoRaw.plan;
+    app.runtime = demoRaw.runtime;
+    app.dataSource = demoRaw.dataSource || 'demo';
+    if (demoRaw.hp) Object.assign(tabletHp, demoRaw.hp);
+  } else if (realSlot) {
+    app.plan = realSlot.plan;
+    app.runtime = { fightIndex: (realSlot.runtime && realSlot.runtime.fightIndex) || 0, turnOrder: null };
+    app.dataSource = 'real';
+    const nem = nemesisAt(app.runtime.fightIndex);
+    tabletHp.erzfeind = clampHp(nem ? Number(nem.health) || 0 : 0);
+  } else {
+    app.plan = buildDemoPlan('4');
+    app.runtime = { fightIndex: 0, turnOrder: null };
+    app.dataSource = 'demo';
+    const nem = nemesisAt(0);
+    tabletHp.erzfeind = clampHp(nem ? Number(nem.health) || 0 : 0);
+  }
+
+  el('cfgPlayerCount').value = app.plan.easyMode ? '4-easy' : String(app.plan.playerCount);
+  updateDataSourceNote();
+}
+
+function updateDataSourceNote() {
+  el('tabletDataSourceNote').textContent = app.dataSource === 'real'
+    ? 'Datenquelle: zuletzt gespeicherte echte Expedition (nur lesend, wird nicht überschrieben)'
+    : 'Datenquelle: Demo-Daten (kein echter Spielstand vorhanden)';
+  el('tabletTestHint').textContent = app.dataSource === 'real'
+    ? 'Ein echter Spielstand wurde gefunden und wird nur zur Anzeige verwendet — Kampf-Navigation unten simuliert weiterhin nur lokal.'
+    : 'Kein echter Spielstand gefunden — diese Testdaten erlauben es, den Screen unabhängig zu testen.';
+}
+
+/* ================================================================================================
+   Tablet-Modus-Schalter
+   ================================================================================================ */
+function loadTabletModeEnabled() {
+  try { return localStorage.getItem(TABLET_MODE_KEY) === '1'; } catch (e) { return false; }
+}
+function saveTabletModeEnabled(v) {
+  try { localStorage.setItem(TABLET_MODE_KEY, v ? '1' : '0'); } catch (e) { /* ignore */ }
+}
+function applyTabletMode(enabled) {
+  el('tabletStage').hidden = !enabled;
+  el('tabletFallback').hidden = enabled;
+}
+
+/* ================================================================================================
+   Events
+   ================================================================================================ */
+el('tabletModeToggle').addEventListener('change', (e) => {
+  const enabled = e.target.checked;
+  saveTabletModeEnabled(enabled);
+  applyTabletMode(enabled);
+});
+
+el('tabletActiveCard').addEventListener('click', advanceTurnOrder);
+el('btnTabletPeek').addEventListener('click', toggleTurnOrderPeek);
+
+/* Scroll-Lock: Zähler statt einfachem Boolean, da zwei Overlays theoretisch unabhängig
+   geöffnet/geschlossen werden (hier nicht gleichzeitig genutzt, aber so bleibt es robust,
+   falls das doch mal passiert). */
+let tabletOverlayOpenCount = 0;
+function openTabletOverlay(overlayEl) {
+  overlayEl.hidden = false;
+  tabletOverlayOpenCount++;
+  document.body.classList.add('tablet-scroll-lock');
+}
+function closeTabletOverlay(overlayEl) {
+  overlayEl.hidden = true;
+  tabletOverlayOpenCount = Math.max(0, tabletOverlayOpenCount - 1);
+  if (tabletOverlayOpenCount === 0) document.body.classList.remove('tablet-scroll-lock');
+}
+
+el('tabletDeckStack').addEventListener('click', () => {
+  openTabletOverlay(el('overlayDeck'));
+  renderDeckOverlay();
+});
+el('btnCloseDeckOverlay').addEventListener('click', () => closeTabletOverlay(el('overlayDeck')));
+el('overlayDeck').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeTabletOverlay(e.currentTarget); });
+
+el('tabletDiscardSlot').addEventListener('click', () => {
+  openTabletOverlay(el('overlayDiscard'));
+  renderDiscardOverlay();
+  renderTurnOrderSpecial();
+});
+el('btnCloseDiscardOverlay').addEventListener('click', () => closeTabletOverlay(el('overlayDiscard')));
+el('overlayDiscard').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeTabletOverlay(e.currentTarget); });
+
+el('btnSpecialPlayer').addEventListener('click', () => setTurnOrderSpecialPickerMode('player'));
+el('btnSpecialNemesis').addEventListener('click', () => setTurnOrderSpecialPickerMode('nemesis'));
+
+el('btnFesteMinus').addEventListener('click', () => bumpHp('feste', -1));
+el('btnFestePlus').addEventListener('click', () => bumpHp('feste', 1));
+el('btnErzfeindMinus').addEventListener('click', () => bumpHp('erzfeind', -1));
+el('btnErzfeindPlus').addEventListener('click', () => bumpHp('erzfeind', 1));
+
+el('tabletBtnBack').addEventListener('click', () => showToast('Platzhalter — "Zurück zur Übersicht" (goto(\'overview\'))'));
+el('tabletBtnLoss').addEventListener('click', () => showToast('Platzhalter — "Niederlage" (playSfx(\'battle_lost\'); goto(\'loss-reward\'))'));
+el('tabletBtnWin').addEventListener('click', () => showToast('Platzhalter — "Sieg" (startWinFlow() / finishExpedition())'));
+
+// Leertaste = Zug beenden & nächste Karte, außer Fokus liegt auf einem Formularelement — nur aktiv,
+// wenn der Tablet-Screen gerade sichtbar ist (analog zur app.step === 'battle'-Guard in app.js).
+document.addEventListener('keydown', (e) => {
+  if (e.code !== 'Space') return;
+  if (el('tabletStage').hidden) return;
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (['input', 'select', 'textarea', 'button'].includes(tag)) return;
+  e.preventDefault();
+  advanceTurnOrder();
+});
+
+/* ---------- Test-Umgebung: Events ---------- */
+el('cfgPlayerCount').addEventListener('change', (e) => {
+  const key = e.target.value;
+  app.plan = buildDemoPlan(key);
+  app.runtime = { fightIndex: 0, turnOrder: null };
+  app.dataSource = 'demo';
+  const nem = nemesisAt(0);
+  tabletHp.erzfeind = clampHp(nem ? Number(nem.health) || 0 : 0);
+  updateDataSourceNote();
+  renderNav();
+  ensureTurnOrderFight();
+  renderHpCounters();
+  persistTabletDemo();
+});
+
+el('btnDemoNextFight').addEventListener('click', () => {
+  if (app.runtime.fightIndex >= 3) return;
+  app.runtime.fightIndex++;
+  renderNav();
+  ensureTurnOrderFight();
+  const nem = nemesisAt(app.runtime.fightIndex);
+  tabletHp.erzfeind = clampHp(nem ? Number(nem.health) || 0 : 0);
+  renderHpCounters();
+  persistTabletDemo();
+});
+el('btnDemoPrevFight').addEventListener('click', () => {
+  if (app.runtime.fightIndex <= 0) return;
+  app.runtime.fightIndex--;
+  renderNav();
+  ensureTurnOrderFight();
+  const nem = nemesisAt(app.runtime.fightIndex);
+  tabletHp.erzfeind = clampHp(nem ? Number(nem.health) || 0 : 0);
+  renderHpCounters();
+  persistTabletDemo();
+});
+el('btnDemoReset').addEventListener('click', () => {
+  try { localStorage.removeItem(TABLET_DEMO_KEY); } catch (e) { /* ignore */ }
+  app.plan = buildDemoPlan(el('cfgPlayerCount').value);
+  app.runtime = { fightIndex: 0, turnOrder: null };
+  app.dataSource = 'demo';
+  tabletHp.feste = 30;
+  const nem = nemesisAt(0);
+  tabletHp.erzfeind = clampHp(nem ? Number(nem.health) || 0 : 0);
+  updateDataSourceNote();
+  renderNav();
+  ensureTurnOrderFight();
+  renderHpCounters();
+  persistTabletDemo();
+});
+
+/* ---------- Init ---------- */
+initAppState();
+applyTabletMode(loadTabletModeEnabled());
+el('tabletModeToggle').checked = loadTabletModeEnabled();
+renderNav();
+ensureTurnOrderFight();
+renderHpCounters();
+</script>
+
+</body>
+</html>
