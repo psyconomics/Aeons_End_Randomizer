@@ -514,9 +514,8 @@ function freshRuntimeState() {
     // renderBattle() innerhalb desselben Kampfes — siehe fightIndex-Guard dort).
     turnOrder: null,
     // Tablet-Kampf-Screen: Feste-/Erzfeind-Trefferpunkte (gemergt aus tablet-combat.html,
-    // Stand 2026-09-24). Feste startet bei 30 und bleibt über den gesamten Kampfverlauf (auch
-    // über mehrere Kämpfe hinweg) erhalten — nur Erzfeind wird bei jedem neuen Kampf auf
-    // nem.health zurückgesetzt (siehe startNewTurnOrderFight()).
+    // Stand 2026-09-24). Feste wird seit 2026-10-24 bei jedem neuen Kampf wie der Erzfeind auf
+    // den Startwert (30/35) zurückgesetzt (siehe startNewTurnOrderFight()).
     hp: { feste: 30, erzfeind: 0 },
     // Spielzeit-Tracking je Erzfeind-Kampf (nur innerhalb der laufenden Sitzung, kein Anspruch
     // auf Genauigkeit über App-Neustarts/Geräte hinweg): je Kampf ein Eintrag
@@ -647,8 +646,8 @@ Schreibe wie ein offiziell lektorierter Kampagnentext aus der Welt von Aeon's En
 - Beschreibung: sparsam, aber konkret. Nur Details, die Atmosphäre, Handlung oder Charakterisierung tragen; keine bedeutungslosen Adjektive, keine austauschbaren Fantasy-Bilder.
 - Dialog: natürlich und mit Zweck. Keine kurzen Zeilen, die nur Spannung markieren oder Information künstlich dramatisch zerstückeln.
 
-LÄNGE (hart — eher kürzer)
-Kapitel 1–4: je 180–250 Wörter. Epilog: 120–180 Wörter.
+LÄNGE (hart)
+Kapitel 1–4: je 280–380 Wörter. Epilog: 180–260 Wörter. Nutze den Platz für wenige, vollständig entwickelte Absätze (typisch 3–5 pro Kapitel) statt vieler kurzer.
 
 AUFBAU JEDES KAPITELS
 Beginnt (außer Kapitel 1) mit 1–2 Sätzen Auflösung des vorigen Kampfes. Dann EINE klare Szene, die die Gruppe zum nächsten Erzfeind führt. Kein Kampf und kein Kampfausgang im selben Abschnitt, der zu diesem Kampf hinführt — das kommt erst zu Beginn des nächsten Abschnitts.
@@ -719,7 +718,7 @@ function parseMegaStory(raw) {
   return sections;
 }
 
-const WORD_COUNT_TARGETS = { 1: [180, 250], 2: [180, 250], 3: [180, 250], 4: [180, 250], epilogue: [120, 180] };
+const WORD_COUNT_TARGETS = { 1: [280, 380], 2: [280, 380], 3: [280, 380], 4: [280, 380], epilogue: [180, 260] };
 function countWords(text) { return text.trim().split(/\s+/).filter(Boolean).length; }
 
 // ---------- Soundeffekte ----------
@@ -3071,6 +3070,9 @@ function startNewTurnOrderFight(fightIndex) {
   // freshRuntimeState()/festeStartValue() zurück). Startwert abhängig von der Schwierigkeit
   // (plan.difficulty) — siehe nemesisStartHealth().
   app.runtime.hp.erzfeind = clampHp(nemesisStartHealth(nem, app.plan));
+  // Nutzer-Vorgabe 2026-10-24: Feste startet JEDEN Kampf mit vollem Leben (30 bzw. 35 bei "Leicht"),
+  // nicht mehr über Kämpfe hinweg fortgeführt.
+  app.runtime.hp.feste = clampHp(festeStartValue(app.plan));
   // Direkt die erste Karte aufdecken, statt einen leeren "Kampf noch nicht gestartet"-Zustand
   // anzuzeigen — advanceTurnOrder() zieht hier einfach die oberste Karte des frisch gemischten Decks.
   advanceTurnOrder();
